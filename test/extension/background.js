@@ -47,4 +47,43 @@ async function analyzeEmail(emailPayload) {
     subject: "Urgent: Verify Your Account",
   };
 }
- 
+ // Create an alarm every 1 minute to keep the worker "hot"
+chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'keepAlive') {
+    console.log('[PhishGuard.AI] Heartbeat: Worker is active.');
+  }
+});// background.js
+
+chrome.runtime.onStartup.addListener(() => {
+    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+        if (chrome.runtime.lastError || !token) {
+            console.log("[PhishGuard.AI] No active session found on startup.");
+        } else {
+            console.log("[PhishGuard.AI] Session validated silently.");
+        }
+    });
+});
+// background.js
+function getAuthTokenSilent() {
+  return new Promise((resolve) => {
+    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+      if (chrome.runtime.lastError || !token) {
+        console.log("[PhishGuard.AI] No cached session found.");
+        resolve(null);
+      } else {
+        console.log("[PhishGuard.AI] Session restored.");
+        resolve(token);
+      }
+    });
+  });
+}
+
+// Check on startup
+chrome.runtime.onStartup.addListener(async () => {
+  const token = await getAuthTokenSilent();
+  if (token) {
+    chrome.storage.local.set({ authToken: token });
+  }
+});

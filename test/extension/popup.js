@@ -1,8 +1,59 @@
 const BACKEND = 'http://localhost:3000';
 let accessToken = null;
 let currentReport = null;
+// Add this to the top of your popup.js
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === "EMAIL_OPENED") {
+        console.log("[PhishGuard.AI] Auto-scanning email ID:", message.emailId);
+        autoScanSpecificEmail(message.emailId);
+    }
+});
+
+async function autoScanSpecificEmail(id) {
+    // 1. Check if we already scanned this in the dashboard
+    const { scanHistory = [] } = await chrome.storage.local.get(['scanHistory']);
+    const existing = scanHistory.find(item => item.id === id);
+
+    if (existing) {
+        showReport(existing); // Immediately show the saved report
+        return;
+    }
+
+    // 2. If new, trigger the forensic swarm
+    goTo('v-loading');
+    try {
+        const res = await fetch(`${BACKEND}/analyze-single`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ accessToken, emailId: id }),
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            // Log to dashboard history
+            const updatedHistory = [...scanHistory, data.result];
+            chrome.storage.local.set({ scanHistory: updatedHistory });
+            showReport(data.result);
+        }
+    } catch (err) {
+        console.error("Auto-scan failed:", err);
+        goTo('v-dash');
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ─── SILENT RE-AUTH START ───
+    // Try to get the token without showing a popup (interactive: false)
+    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+        if (!chrome.runtime.lastError && token) {
+            accessToken = token;
+            goTo('v-dash'); // Auto-navigate to dashboard if logged in
+        } else {
+            goTo('v-auth'); // Stay on/go to login if no session found
+        }
+    });
+    // ─── SILENT RE-AUTH END ───
+
     document.getElementById('signInBtn').addEventListener('click', signIn);
     document.getElementById('startScanBtn').addEventListener('click', startAnalysis);
     document.getElementById('backToDash').addEventListener('click', () => goTo('v-dash'));
@@ -207,4 +258,13 @@ function openReport() {
  */
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+async function refreshToken() {
+    if (!accessToken) return;
+
+    // Remove the expired token from Chrome's cache
+    chrome.identity.removeCachedAuthToken({ token: accessToken }, () => {
+        accessToken = null;
+        signIn(); // Re-run the interactive sign-in
+    });
 }
