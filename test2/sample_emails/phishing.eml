@@ -1,0 +1,25 @@
+Return-Path: <spoofed@amazon-billing-secure.com>
+From: "Amazon Support" <spoofed@amazon-billing-secure.com>
+To: target@victim.com
+Reply-To: hackers-inbox@yandex.com
+Date: Tue, 3 Apr 2026 12:00:00 +0000
+Subject: URGENT: Your Amazon Account Has Been Suspended!
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+URGENT ACTION REQUIRED
+
+Dear Customer,
+
+We have detected unusual sign-in activity on your Amazon account.
+Your account has been temporarily restricted.
+
+To unlock your account, you must verify your billing information immediately.
+
+Please click the secure link below to verify your account:
+http://84.22.11.90/login-verify-account-update-amazon-secure-page.php?id=9928374
+
+Failure to act within 24 hours will result in permanent suspension.
+
+Thank you,
+Amazon Billing Team

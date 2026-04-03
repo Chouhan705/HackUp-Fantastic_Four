@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>NoPhishZone</title>
+    <style>
+      body { width: 350px; font-family: system-ui, sans-serif; padding: 15px; margin: 0; }
+      h2 { margin-top: 0; display: flex; align-items: center; }
+      .btn { width: 100%; padding: 12px; background: #2b78e4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
+      .btn:hover { background: #1a62c5; }
+      #result { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; background: #f8f9fa; border: 1px solid #ddd; }
+      .Critical { border-left: 5px solid red; }
+      .Dangerous { border-left: 5px solid orange; }
+      .Suspicious { border-left: 5px solid #d4a017; }
+      .Safe { border-left: 5px solid green; }
+      .loader { display: none; margin-top: 15px; text-align: center; color: #666; font-style: italic; }
+      .evidence-list { font-size: 13px; color: #444; padding-left: 15px; margin-bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <h2>🛡️ NoPhishZone</h2>
+    <p style="font-size: 13px; color: #666;">Protect yourself with the 5-Layer Hybrid ML Pipeline.</p>
+    
+    <button id="scanBtn" class="btn">Scan Current Page</button>
+    <div id="loading" class="loader">Aggregating AI & ONNX Results... (Under 2s)</div>
+    
+    <div id="result">
+      <h3 id="threatLevel" style="margin: 0 0 10px 0;"></h3>
+      <p id="summary" style="font-size: 14px; margin-bottom: 10px;"></p>
+      <strong style="font-size: 13px;">Key Evidence:</strong>
+      <ul id="evidence" class="evidence-list"></ul>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

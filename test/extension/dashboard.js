@@ -146,6 +146,9 @@ function initCharts() {
             }]
         }
     });
+
+    if (vectorChart) vectorChart.destroy();
+    initVectorChart();
 }
 
 let map = null;
@@ -206,7 +209,10 @@ function initVectorChart() {
         }
     });
 
-    setupChartListeners();
+    if (!window.chartListenersSetup) {
+        setupChartListeners();
+        window.chartListenersSetup = true;
+    }
 }
 
 function setupChartListeners() {

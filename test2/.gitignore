@@ -1,0 +1,35 @@
+# --- Security & Secrets ---
+# NEVER commit your Google API credentials
+client_secret*.json
+clients.txt
+*.env
+node_modules/
+# --- Temporary Data & Caches ---
+# Don't upload the locally stored emails (temp_inbox.json)
+temp_inbox.json
+*.log
+*.sqlite
+package-lock.json
+# --- Python Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+.venv
+build/
+dist/
+*.egg-info/
+
+# --- OS Specific Files ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- Machine Learning Artifacts ---
+# If you eventually save trained models (.pkl or .joblib)
+*.pkl
+*.joblib
+*.h5
