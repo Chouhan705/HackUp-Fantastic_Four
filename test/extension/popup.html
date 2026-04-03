@@ -1,186 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <title>PhishGuard.AI</title>
-    <style>
-        /* ... (Keep your CSS exactly as it was) ... */
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{width:320px;height:480px;background:#060d1a;color:#e2e8f0;font-family:'JetBrains Mono',monospace;overflow:hidden}
-        body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(34,211,238,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.03) 1px,transparent 1px);background-size:24px 24px;pointer-events:none}
-        .view{display:none;flex-direction:column;width:320px;height:480px;position:absolute;top:0;left:0}
-        .view.active{display:flex}
-        #v-auth{align-items:center;justify-content:center;gap:20px;padding:24px}
-        .logo-box{width:76px;height:76px;border-radius:18px;background:#0f172a;border:1px solid #22d3ee22;display:flex;align-items:center;justify-content:center;box-shadow:0 0 24px #22d3ee22}
-        .pg-title{font-size:22px;font-weight:800;background:linear-gradient(90deg,#22d3ee,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center}
-        .pg-sub{font-size:9px;color:#475569;letter-spacing:.3em;text-align:center}
-        .divider{width:100%;display:flex;align-items:center;gap:8px}
-        .divider-line{flex:1;height:1px;background:#1e293b}
-        .divider-txt{font-size:9px;color:#334155;letter-spacing:.15em}
-        .signin-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:12px;background:#0f172a;border:1px solid #1e293b;color:#64748b;font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .2s}
-        .signin-btn:hover{border-color:#22d3ee55;color:#e2e8f0;box-shadow:0 0 20px #22d3ee22}
-        .err-msg{font-size:10px;color:#ff2d55;text-align:center;min-height:14px}
-        #v-dash{padding:18px;gap:0;justify-content:flex-start}
-        .dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-        .dash-logo{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#22d3ee;letter-spacing:.1em}
-        .live-badge{display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:100px;background:#0f291a;border:1px solid #30d15833;font-size:9px;color:#30d158}
-        .live-dot{width:6px;height:6px;border-radius:50%;background:#30d158;box-shadow:0 0 6px #30d158;animation:pulsedot 2s infinite}
-        .eval-btn{width:100%;flex:1;border-radius:16px;background:#0a1628;border:1px solid #1e293b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:all .3s;margin-bottom:14px}
-        .eval-btn:hover{border-color:#22d3ee55;box-shadow:0 0 40px #22d3ee22}
-        .eval-btn:hover .eval-label{color:#e2e8f0}
-        .icon-ring{width:52px;height:52px;border-radius:50%;background:#0f172a;border:1px solid #1e293b;display:flex;align-items:center;justify-content:center;transition:all .3s}
-        .eval-btn:hover .icon-ring{border-color:#22d3ee55;box-shadow:0 0 24px #22d3ee33}
-        .eval-label{font-size:12px;font-weight:700;letter-spacing:.12em;color:#64748b;transition:color .3s}
-        .eval-sub{font-size:9px;color:#334155}
-        .status-bar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:100px;background:#0a0f1a;border:1px solid #0f172a;font-size:10px;color:#475569}
-        #v-loading{align-items:center;justify-content:center;gap:16px}
-        .dna-icon{animation:spin 1s linear infinite;filter:drop-shadow(0 0 8px #22d3ee)}
-        .analyzing{font-size:11px;font-weight:700;letter-spacing:.2em;color:#22d3ee}
-        .scan-sub{font-size:9px;color:#475569}
-        .prog-bar{width:200px;height:2px;border-radius:2px;background:#1e293b;overflow:hidden}
-        .prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#22d3ee,#818cf8)}
-        #v-list{padding:14px;gap:0;justify-content:flex-start}
-        .list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-        .list-title{font-size:10px;font-weight:700;letter-spacing:.2em;color:#22d3ee}
-        .back-btn{font-size:10px;color:#334155;cursor:pointer;background:none;border:none;font-family:'JetBrains Mono',monospace}
-        .back-btn:hover{color:#22d3ee}
-        .email-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
-        .email-list::-webkit-scrollbar{width:3px}
-        .email-list::-webkit-scrollbar-track{background:#0f172a}
-        .email-list::-webkit-scrollbar-thumb{background:#1e293b;border-radius:2px}
-        .email-card{padding:10px 12px;border-radius:10px;background:#0a0f1a;border:1px solid #0f172a;cursor:pointer;transition:all .2s}
-        .email-card:hover{border-color:#22d3ee33;background:#0f172a}
-        .email-score{font-size:18px;font-weight:800;flex-shrink:0;width:44px;text-align:center}
-        .email-subject{font-size:10px;font-weight:700;color:#e2e8f0;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .email-sender{font-size:9px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .threat-pill{font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 6px;border-radius:100px;flex-shrink:0}
-        #v-report{padding:14px;gap:10px;justify-content:flex-start}
-        .report-header{width:100%;display:flex;align-items:center;justify-content:space-between}
-        .report-title{font-size:10px;font-weight:700;letter-spacing:.2em;color:#22d3ee}
-        .risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:9px;font-weight:700;letter-spacing:.15em}
-        .alert-card{width:100%;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:5px}
-        .alert-head{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700}
-        .findings-list{display:flex;flex-direction:column;gap:4px;max-height:90px;overflow-y:auto}
-        .finding-item{font-size:9px;color:#64748b;display:flex;gap:5px;align-items:flex-start;line-height:1.5}
-        .finding-dot{width:4px;height:4px;border-radius:50%;flex-shrink:0;margin-top:4px}
-        .meta-row{width:100%;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;background:#0a0f1a;border:1px solid #0f172a;font-size:9px}
-        .meta-key{color:#334155;width:28px;flex-shrink:0}
-        .meta-val{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-        .full-btn{width:100%;padding:9px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.12em;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:none;font-family:'JetBrains Mono',monospace;transition:all .2s}
-        @keyframes pulsedot{0%,100%{opacity:1}50%{opacity:.4}}
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-    </style>
+  <meta charset="UTF-8"/>
+  <title>PhishGuard.AI</title>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
- 
-<div class="view active" id="v-auth">
-  <div class="logo-box">
-    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-  </div>
-  <div>
-    <div class="pg-title">PhishGuard.AI</div>
-    <div class="pg-sub">THREAT INTELLIGENCE ENGINE</div>
-  </div>
-  <div class="divider">
-    <div class="divider-line"></div>
-    <span class="divider-txt">SECURE AUTH</span>
-    <div class="divider-line"></div>
-  </div>
-  <!-- ADDED ID: signInBtn -->
-  <button class="signin-btn" id="signInBtn">
-    <svg width="17" height="17" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-    Sign in with Google
-  </button>
-  <div class="err-msg" id="authErr"></div>
-</div>
- 
-<div class="view" id="v-dash">
-  <div class="dash-header">
-    <div class="dash-logo">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-      PhishGuard.AI
+
+  <!-- VIEW: AUTH -->
+  <div class="view active" id="v-auth">
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="shield-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <h1 class="brand-name">🛡️ PHISHGUARD</h1>
+        <p class="brand-sub">THREAT INTELLIGENCE ENGINE</p>
+      </div>
+
+      <div class="divider-row">
+        <span class="divider-line"></span>
+        <span class="divider-txt">SECURE AUTH</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <button class="google-btn" id="signInBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign in with Google
+      </button>
+
+      <div class="err-msg" id="authErr"></div>
     </div>
-    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
   </div>
- 
-  <!-- ADDED ID: startScanBtn -->
-  <button class="eval-btn" id="startScanBtn">
-    <div class="icon-ring">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+
+  <!-- VIEW: DASHBOARD -->
+  <div class="view" id="v-dash">
+    <div class="header">
+      <span>🛡️ PHISHGUARD</span>
+      <span class="badge live-badge"><span class="live-dot"></span>LIVE</span>
     </div>
-    <div style="text-align:center">
-      <div class="eval-label">EVALUATE INBOX</div>
-      <div class="eval-sub">Scans your 5 latest emails · ~3s</div>
+
+    <div class="dash-body">
+      <button class="scan-btn" id="startScanBtn">
+        <div class="scan-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </div>
+        <div>
+          <div class="scan-label">EVALUATE INBOX</div>
+          <div class="scan-sub">Scans your 5 latest emails · ~3s</div>
+        </div>
+      </button>
+
+      <div class="status-bar">
+        <span id="statusTxt">⬤ Connected to Gmail</span>
+        <span class="secure-txt">●●●●● SECURE</span>
+      </div>
     </div>
-  </button>
- 
-  <div class="status-bar">
-    <span id="statusTxt">⬤ Connected to Gmail</span>
-    <span style="color:#1e293b">●●●●● SECURE</span>
   </div>
-</div>
- 
-<div class="view" id="v-loading">
-  <svg class="dna-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15c6.667-6 13.333 0 20-6"/><path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/><path d="M22 9c-4.667 4-9.333 4-14 8"/><path d="M2 9c0 5.5 7 6 9 12"/><path d="M22 15c0-5.5-7-6-9-12"/><path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/></svg>
-  <div style="text-align:center">
-    <div class="analyzing" id="dnaText">ANALYZING DNA...</div>
-    <div class="scan-sub">Fetching emails · scanning links · scoring threats</div>
+
+  <!-- VIEW: LOADING -->
+  <div class="view" id="v-loading">
+    <div class="loading-wrap">
+      <div class="spinner">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 15c6.667-6 13.333 0 20-6"/>
+          <path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/>
+          <path d="M22 9c-4.667 4-9.333 4-14 8"/>
+          <path d="M2 9c0 5.5 7 6 9 12"/>
+          <path d="M22 15c0-5.5-7-6-9-12"/>
+          <path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/>
+        </svg>
+      </div>
+      <div class="analyzing" id="dnaText">ANALYZING DNA...</div>
+      <div class="scan-sub-txt">Fetching emails · scanning links · scoring threats</div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    </div>
   </div>
-  <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0"></div></div>
-</div>
- 
-<div class="view" id="v-list">
-  <div class="list-header">
-    <!-- ADDED ID: backToDash -->
-    <button class="back-btn" id="backToDash">← BACK</button>
-    <div class="list-title">INBOX SCAN RESULTS</div>
-    <div style="width:40px"></div>
+
+  <!-- VIEW: EMAIL LIST -->
+  <div class="view" id="v-list">
+    <div class="header">
+      <button class="back-btn" id="backToDash">← BACK</button>
+      <span>INBOX RESULTS</span>
+      <span style="width:56px"></span>
+    </div>
+    <div class="email-list" id="emailList"></div>
   </div>
-  <div class="email-list" id="emailList"></div>
-</div>
- 
-<div class="view" id="v-report">
-  <div class="report-header">
-    <!-- ADDED ID: backToList -->
-    <button class="back-btn" id="backToList">← BACK</button>
-    <div class="report-title">THREAT REPORT</div>
-    <div style="width:40px"></div>
+
+  <!-- VIEW: REPORT -->
+  <div class="view" id="v-report">
+    <div class="header">
+      <button class="back-btn" id="backToList">← BACK</button>
+      <span>🛡️ PHISHGUARD</span>
+      <span class="badge" id="riskBadge">Phishing</span>
+    </div>
+
+    <div class="circle">
+      <h1 id="gaugeScore">0%</h1>
+      <p>Phishing Probability</p>
+    </div>
+
+    <div class="alerts" id="findingsList"></div>
+
+    <div class="meta-row"><span class="meta-key">FROM</span><span class="meta-val" id="rFrom">—</span></div>
+    <div class="meta-row"><span class="meta-key">SUBJ</span><span class="meta-val" id="rSubj">—</span></div>
+
+    <button class="full-report-btn" id="fullBtn">🔍 View Full Report</button>
   </div>
- 
-  <svg viewBox="0 0 200 110" width="200" height="110" style="display:block;margin:0 auto">
-    <defs>
-      <filter id="gl"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      <linearGradient id="ag" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" id="g1" stop-color="#ff2d55" stop-opacity="0.6"/>
-        <stop offset="100%" id="g2" stop-color="#ff2d55"/>
-      </linearGradient>
-    </defs>
-    <path d="M 28 95 A 72 72 0 0 1 172 95" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round"/>
-    <path id="gaugeArc" d="M 28 95 A 72 72 0 0 1 28 95" fill="none" stroke="url(#ag)" stroke-width="10" stroke-linecap="round" filter="url(#gl)"/>
-    <circle id="gaugeDot" cx="28" cy="95" r="5" fill="#ff2d55" filter="url(#gl)"/>
-    <text id="gaugeScore" x="100" y="84" text-anchor="middle" font-size="30" font-weight="700" font-family="JetBrains Mono,monospace" fill="#ff2d55" filter="url(#gl)">0%</text>
-    <text x="100" y="100" text-anchor="middle" font-size="8" font-family="JetBrains Mono,monospace" fill="#475569" letter-spacing="3">PHISH RISK</text>
-    <text x="22" y="108" font-size="7" fill="#334155" font-family="monospace">LOW</text>
-    <text x="155" y="108" font-size="7" fill="#334155" font-family="monospace">HIGH</text>
-  </svg>
- 
-  <div style="display:flex;justify-content:center">
-    <div class="risk-badge" id="riskBadge">— SAFE</div>
-  </div>
- 
-  <div class="alert-card" id="alertCard">
-    <div class="alert-head" id="alertHead">Analysis complete</div>
-    <div class="findings-list" id="findingsList"></div>
-  </div>
- 
-  <div class="meta-row"><span class="meta-key">FROM</span><span class="meta-val" id="rFrom" style="color:#64748b">—</span></div>
-  <div class="meta-row"><span class="meta-key">SUBJ</span><span class="meta-val" id="rSubj" style="color:#64748b">—</span></div>
- 
-  <button class="full-btn" id="fullBtn">🔍 FULL FORENSIC REPORT</button>
-</div>
- 
-<!-- Link your JS file here -->
+
 <script src="popup.js"></script>
 </body>
 </html>
