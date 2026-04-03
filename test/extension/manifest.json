@@ -24,6 +24,9 @@
       "profile"
     ]
   },
+  "action": {
+    "default_title": "PhishGuard.AI"
+  },
   "side_panel": {
     "default_path": "popup.html"
   },
