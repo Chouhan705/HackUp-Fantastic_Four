@@ -132,6 +132,7 @@ async function fetchSingleEmail(accessToken, emailId) {
   const sender  = headers.find(h => h.name.toLowerCase() === 'from')?.value  || 'Unknown';
   const date    = headers.find(h => h.name.toLowerCase() === 'date')?.value  || '';
 
+
   return {
     id:        emailId,
     subject,
