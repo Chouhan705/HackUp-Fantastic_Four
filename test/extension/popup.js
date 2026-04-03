@@ -10,17 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fullBtn').addEventListener('click', openReport);
 });
 
+/**
+ * View Management
+ */
 function goTo(id) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
+/**
+ * Authentication via Google OAuth2
+ */
 function signIn() {
     const errEl = document.getElementById('authErr');
     if (errEl) errEl.textContent = '';
+    
     chrome.identity.getAuthToken({ interactive: true }, (token) => {
         if (chrome.runtime.lastError || !token) {
             if (errEl) errEl.textContent = 'Sign-in failed. Try again.';
+            console.error(chrome.runtime.lastError);
             return;
         }
         accessToken = token;
@@ -28,10 +36,16 @@ function signIn() {
     });
 }
 
+/**
+ * Core Analysis Pipeline
+ * Communicates with Node.js backend and logs results to storage
+ */
 async function startAnalysis() {
     goTo('v-loading');
     const fill = document.getElementById('progFill');
     fill.style.width = '0%';
+    
+    // UI Progress Bar Animation
     setTimeout(() => fill.style.width = '90%', 50);
 
     let dots = 0;
@@ -46,17 +60,30 @@ async function startAnalysis() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken, maxResults: 5 }),
         });
+        
         const data = await res.json();
         clearInterval(dotTimer);
         fill.style.width = '100%';
 
         if (!data.success) throw new Error(data.error || 'Unknown error');
 
+        // LOGGING LOGIC: Save results to scanHistory for Dashboard widgets
+        chrome.storage.local.get(['scanHistory'], (result) => {
+            const history = result.scanHistory || [];
+            // Append new forensic results to history array
+            const updatedHistory = [...history, ...data.results]; 
+            chrome.storage.local.set({ 
+                scanHistory: updatedHistory,
+                lastReport: data.results[0] // Set most recent for quick access
+            });
+        });
+
         setTimeout(() => {
             fill.style.width = '0';
             renderEmailList(data.results);
             goTo('v-list');
         }, 400);
+
     } catch (err) {
         clearInterval(dotTimer);
         document.getElementById('statusTxt').textContent = '✕ Error: ' + err.message;
@@ -64,11 +91,15 @@ async function startAnalysis() {
     }
 }
 
+/**
+ * Renders the Inbox Scan list
+ */
 function renderEmailList(results) {
     const list = document.getElementById('emailList');
     list.innerHTML = '';
+    
     results.forEach(r => {
-        // Correcting the mapping to match agents.js
+        // Aligned with agents.js schema: final_risk_score
         const score = r.final_risk_score || 0;
         const color = score >= 70 ? '#ff2d55' : score >= 40 ? '#ffd60a' : '#30d158';
         const bg = score >= 70 ? '#ff2d5511' : score >= 40 ? '#ffd60a11' : '#30d15811';
@@ -91,6 +122,9 @@ function renderEmailList(results) {
     });
 }
 
+/**
+ * Populates the detailed view for a selected email
+ */
 function showReport(r) {
     currentReport = r;
     const score = r.final_risk_score || 0;
@@ -113,7 +147,7 @@ function showReport(r) {
     document.getElementById('alertHead').textContent = r.user_friendly_summary || "Analysis complete";
 
     const fl = document.getElementById('findingsList');
-    const evidence = r.key_evidence || [];
+    const evidence = r.key_evidence || []; // Aligned with Agent Judge output
     fl.innerHTML = evidence.map(f =>
         `<div class="finding-item"><div class="finding-dot" style="background:${color}"></div>${escHtml(f)}</div>`
     ).join('');
@@ -121,7 +155,6 @@ function showReport(r) {
     document.getElementById('rFrom').textContent = r.sender;
     document.getElementById('rSubj').textContent = r.subject;
     
-    // Add fallback warning if applicable
     if (r.is_fallback) {
         document.getElementById('rSubj').innerHTML += ` <span style="color:#ffd60a;">[OFFLINE SCAN]</span>`;
     }
@@ -133,6 +166,9 @@ function showReport(r) {
     animateGauge(score, color);
 }
 
+/**
+ * Animated SVG Gauge logic
+ */
 function animateGauge(target, color) {
     const scoreEl = document.getElementById('gaugeScore');
     const arcEl = document.getElementById('gaugeArc');
@@ -163,6 +199,9 @@ function animateGauge(target, color) {
     })(start);
 }
 
+/**
+ * Opens the Full Forensic Report in a new tab
+ */
 function openReport() {
     if (!currentReport) return;
     chrome.storage.local.set({ lastReport: currentReport }, () => {
@@ -170,6 +209,9 @@ function openReport() {
     });
 }
 
+/**
+ * Basic XSS protection for HTML rendering
+ */
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
