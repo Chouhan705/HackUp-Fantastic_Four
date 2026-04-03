@@ -57,6 +57,27 @@
       (agentReports && agentReports.profiler ? agentReports.profiler.risk : 'unknown')
     ];
     
+    const agentFlags = [];
+    if (agentReports) {
+        if (agentReports.dna && agentReports.dna.finding && agentReports.dna.risk !== 'low') {
+            agentFlags.push(`[DNA Risk: ${agentReports.dna.risk.toUpperCase()}] ${agentReports.dna.finding}`);
+        } else if (agentReports.dna && agentReports.dna.finding) {
+            agentFlags.push(`DNA Agent: ${agentReports.dna.finding}`);
+        }
+        
+        if (agentReports.links && agentReports.links.finding && agentReports.links.risk !== 'low') {
+            agentFlags.push(`[Link Risk: ${agentReports.links.risk.toUpperCase()}] ${agentReports.links.finding}`);
+        } else if (agentReports.links && agentReports.links.finding) {
+            agentFlags.push(`Link Agent: ${agentReports.links.finding}`);
+        }
+        
+        if (agentReports.profiler && agentReports.profiler.finding && agentReports.profiler.risk !== 'low') {
+            agentFlags.push(`[Profiler Risk: ${agentReports.profiler.risk.toUpperCase()}] ${agentReports.profiler.finding}`);
+        } else if (agentReports.profiler && agentReports.profiler.finding) {
+            agentFlags.push(`Profiler Agent: ${agentReports.profiler.finding}`);
+        }
+    }
+    
     // Add up to 30 points for Agent warnings
     let agent_score = agentRisks.filter(r => r === 'high' || r === 'critical').length * 10;
     if (agent_score > 30) agent_score = 30;
@@ -66,14 +87,24 @@
     
     let status = final_risk_score >= 80 ? 'BLOCKED' : (final_risk_score >= 40 ? 'WARNING' : 'SAFE');
     
+    let recommendation = `Engine assessed score ${Math.round(final_risk_score)}.`;
+    if (status === 'SAFE') recommendation = "Content appears safe and exhibits no known malicious signatures.";
+    else if (status === 'WARNING') recommendation = "Exercise caution. Some anomalous or suspicious patterns were detected.";
+    else if (status === 'BLOCKED') recommendation = "High risk of phishing or malicious activity. Do not interact.";
+
+    let proberScore = 0;
+    if (executionContext.prober_score && executionContext.prober_score.riskScore) {
+        proberScore = Math.round(executionContext.prober_score.riskScore);
+    }
+    
     return {
         status: status,
         score: Math.round(final_risk_score),
-        logic_path: 'Scoring Engine',
+        logic_path: `Hybrid Pipeline \n↓\n Sentry Rules \n↓\n ML Prober (Risk: ${proberScore}%) \n↓\n 3-Agent Analysis \n↓\n Judge Consensus: ${status}`,
         forensics: {
-            behavior_flags: [...sentry_flags, ...agentRisks.filter(r => r !== 'unknown').map(r => 'Agent Risk: ' + r)]
+            behavior_flags: [...sentry_flags, ...agentFlags]
         },
-        recommendation: `Engine assessed score ${Math.round(final_risk_score)}.`
+        recommendation: recommendation
     };
   }
 };

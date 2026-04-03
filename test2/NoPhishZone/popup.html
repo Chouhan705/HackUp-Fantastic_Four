@@ -1,35 +1,276 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>NoPhishZone</title>
-    <style>
-      body { width: 350px; font-family: system-ui, sans-serif; padding: 15px; margin: 0; }
-      h2 { margin-top: 0; display: flex; align-items: center; }
-      .btn { width: 100%; padding: 12px; background: #2b78e4; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
-      .btn:hover { background: #1a62c5; }
-      #result { margin-top: 15px; padding: 15px; border-radius: 6px; display: none; background: #f8f9fa; border: 1px solid #ddd; }
-      .Critical { border-left: 5px solid red; }
-      .Dangerous { border-left: 5px solid orange; }
-      .Suspicious { border-left: 5px solid #d4a017; }
-      .Safe { border-left: 5px solid green; }
-      .loader { display: none; margin-top: 15px; text-align: center; color: #666; font-style: italic; }
-      .evidence-list { font-size: 13px; color: #444; padding-left: 15px; margin-bottom: 0; }
-    </style>
-  </head>
-  <body>
-    <h2>🛡️ NoPhishZone</h2>
-    <p style="font-size: 13px; color: #666;">Protect yourself with the 5-Layer Hybrid ML Pipeline.</p>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NoPhishZone</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg: #F9FAFB;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border: #E5E7EB;
+      --safe: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+    }
     
-    <button id="scanBtn" class="btn">Scan Current Page</button>
-    <div id="loading" class="loader">Aggregating AI & ONNX Results... (Under 2s)</div>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 400px;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .header-icon {
+      font-size: 28px;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
     
-    <div id="result">
-      <h3 id="threatLevel" style="margin: 0 0 10px 0;"></h3>
-      <p id="summary" style="font-size: 14px; margin-bottom: 10px;"></p>
-      <strong style="font-size: 13px;">Key Evidence:</strong>
-      <ul id="evidence" class="evidence-list"></ul>
+    .btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #loading {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .spinner {
+      border: 3px solid rgba(0,0,0,0.1);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    #result {
+      display: none;
+      margin-top: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .status-banner {
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+
+    .SAFE .status-banner { background: var(--safe); }
+    .WARNING .status-banner { background: var(--warning); }
+    .BLOCKED .status-banner { background: var(--danger); }
+    .SAFE .status-banner h3::before { content: '✅ '; }
+    .WARNING .status-banner h3::before { content: '⚠️ '; }
+    .BLOCKED .status-banner h3::before { content: '🚨 '; }
+
+    .status-banner h3 {
+      font-size: 22px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-banner p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .details-section {
+      padding: 20px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .recommendation {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      color: var(--text-main);
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .analysis-grid {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+    }
+
+    .data-label { color: var(--text-muted); font-weight: 500; }
+    .data-value { font-weight: 600; color: var(--text-main); }
+    
+    .logic-path {
+      font-family: monospace;
+      font-size: 11px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    .evidence-list {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .evidence-list li {
+      font-size: 13px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      border-left: 3px solid var(--border);
+      position: relative;
+    }
+    
+    .evidence-list li.flag-high { border-left-color: var(--danger); }
+    .evidence-list li.flag-med { border-left-color: var(--warning); }
+    .evidence-list li.flag-info { border-left-color: var(--primary); }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-right: 6px;
+    }
+    .badge.red { background: #fee2e2; color: #991b1b; }
+    .badge.yellow { background: #fef3c7; color: #92400e; }
+    .badge.blue { background: #dbeafe; color: #1e40af; }
+    .badge.green { background: #d1fae5; color: #065f46; }
+
+  </style>
+</head>
+<body>
+  
+  <div class="header">
+    <div class="header-icon">🛡️</div>
+    <div class="header-title">NoPhishZone</div>
+  </div>
+  <p class="subtitle">Advanced Phishing & Malicious Content Protection powered by 5-Layer Hybrid ML Pipeline.</p>
+  
+  <button id="scanBtn" class="btn">Analyze Real-Time Content</button>
+  
+  <div id="loading">
+    <div class="spinner"></div>
+    <div style="font-size: 14px; color: var(--text-muted); font-weight: 500;">Aggregating AI & ONNX Results...</div>
+    <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">Running through 5 detection layers</div>
+  </div>
+  
+  <div id="result">
+    <div class="status-banner">
+      <h3 id="threatLevel">SAFE</h3>
+      <p>Threat Score: <span id="threatScore" style="font-weight: 700; font-size: 16px;"></span>/100</p>
     </div>
 
-    <script src="popup.js"></script>
-  </body>
+    <div class="details-section">
+      <div class="section-title">Verdict Details</div>
+      <div class="recommendation" id="summary"></div>
+      
+      <div class="section-title">Forensic Metrics</div>
+      <div class="analysis-grid" id="metricsGrid">
+        <!-- populated via js -->
+      </div>
+      
+      <div class="section-title">Execution Path</div>
+      <div class="logic-path" id="logicPath">
+        <!-- populated via js -->
+      </div>
+
+      <div class="section-title" id="evidenceTitle" style="display:none;">Key Evidence Identified</div>
+      <ul id="evidence" class="evidence-list"></ul>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
 </html>

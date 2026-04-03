@@ -47,7 +47,13 @@ function displayVerdict(verdict) {
     const loading = document.getElementById('loading');
     const resultBox = document.getElementById('result');
     const threatHeader = document.getElementById('threatLevel');
+    const threatScore = document.getElementById('threatScore');
     const scanBtn = document.getElementById('scanBtn');
+    const summary = document.getElementById('summary');
+    const logicPath = document.getElementById('logicPath');
+    const metricsGrid = document.getElementById('metricsGrid');
+    const evidenceList = document.getElementById('evidence');
+    const evidenceTitle = document.getElementById('evidenceTitle');
 
     loading.style.display = 'none';
     resultBox.style.display = 'block';
@@ -56,56 +62,78 @@ function displayVerdict(verdict) {
     resultBox.className = '';
     resultBox.classList.add(verdict.status);
 
-    threatHeader.innerText = `${verdict.status} (Score: ${verdict.score})`;     
-    threatHeader.style.color = (verdict.status === 'BLOCKED' || verdict.status === 'WARNING') ? 'red' : 'green';
+    threatHeader.innerText = verdict.status;
+    threatScore.innerText = Math.round(verdict.score);
+    
+    summary.innerText = verdict.recommendation;      
 
-    document.getElementById('summary').innerText = verdict.recommendation;      
+    // Populate Logic Path
+    if (verdict.logic_path) {
+        logicPath.innerText = verdict.logic_path.replace(/ \-> /g, '\n↓\n');
+    }
 
-    const evidenceList = document.getElementById('evidence');
+    // Populate Metrics Grid
+    metricsGrid.innerHTML = '';
+    const addMetric = (label, value) => {
+        metricsGrid.innerHTML += `
+            <div class="data-row">
+                <span class="data-label">${label}</span>
+                <span class="data-value">${value}</span>
+            </div>
+        `;
+    };
+
+    if (verdict.forensics) {
+        addMetric("Trust Deficit", verdict.forensics.trust_deficit ? "Detected" : "None");
+        addMetric("URL Obfuscation", verdict.forensics.url_obfuscated ? "Detected" : "Clean");
+        const flagsCount = (verdict.forensics.behavior_flags || []).length;
+        addMetric("Behavior Flags", flagsCount > 0 ? flagsCount : "None");
+    }
+
+    // Clear and populate Evidence list
     evidenceList.innerHTML = '';
     
-    // Add logic path and forensics to evidence
-    const pathLi = document.createElement('li');
-    pathLi.innerText = `Logic Path: ${verdict.logic_path}`;
-    evidenceList.appendChild(pathLi);
+    const addLi = (badgeClass, badgeText, text, liClass) => {
+        const li = document.createElement('li');
+        if (liClass) li.classList.add(liClass);
+        li.innerHTML = `<span class="badge ${badgeClass}">${badgeText}</span> ${text}`;
+        evidenceList.appendChild(li);
+    };
 
     if (verdict.forensics) {
         if (verdict.forensics.trust_deficit) {
-            const li = document.createElement('li');
-            li.innerText = 'Trust Deficit Detected';
-            evidenceList.appendChild(li);
+            addLi('red', 'CRITICAL', 'Significant trust deficit detected in identity parsing.', 'flag-high');
         }
         if (verdict.forensics.url_obfuscated) {
-             const li = document.createElement('li');
-             li.innerText = 'URL Obfuscation Detected';
-             evidenceList.appendChild(li);
+             addLi('yellow', 'WARNING', 'URL shortening or obfuscation techniques found.', 'flag-med');
         }
         if (verdict.forensics.behavior_flags && verdict.forensics.behavior_flags.length > 0) {
             verdict.forensics.behavior_flags.forEach(flag => {
-                const li = document.createElement('li');
-                li.innerText = `Flag: ${flag}`;
-                evidenceList.appendChild(li);
+                addLi('yellow', 'FLAG', flag, 'flag-med');
             });
         }
         if (verdict.forensics.reason) {
-            const li = document.createElement('li');
-            li.innerText = `Reason: ${verdict.forensics.reason}`;
-            evidenceList.appendChild(li);
+            addLi('blue', 'INFO', verdict.forensics.reason, 'flag-info');
         }
         if (verdict.forensics.evidence) {
             verdict.forensics.evidence.forEach(evi => {
-                const li = document.createElement('li');
-                li.innerText = `Evidence: ${evi}`;
-                evidenceList.appendChild(li);
+                addLi('yellow', 'EVIDENCE', evi, 'flag-med');
             });
         }
         if (verdict.forensics.error) {
-            const li = document.createElement('li');
-            li.innerText = `Error Check: ${verdict.forensics.error}`;
-            evidenceList.appendChild(li);
+            addLi('red', 'ERROR', verdict.forensics.error, 'flag-high');
         }
     }
-    scanBtn.innerText = 'Scan Again';
+    
+    if (evidenceList.children.length > 0) {
+        evidenceTitle.style.display = 'block';
+    } else {
+        evidenceTitle.style.display = 'none';
+        addLi('green', 'CLEAN', 'No malicious signatures or anomalies detected.', 'flag-info');
+    }
+
+    scanBtn.innerText = 'Run Analysis Again';
+    scanBtn.disabled = false;
 }
 
 function displayError(msg) {
@@ -114,12 +142,24 @@ function displayError(msg) {
     loading.style.display = 'none';
     
     resultBox.style.display = 'block';
-    resultBox.className = 'Critical';
-    document.getElementById('threatLevel').style.color = 'red';
-    document.getElementById('threatLevel').innerText = "Connection Error";
-    document.getElementById('summary').innerText = msg;
-    document.getElementById('evidence').innerHTML = '';
-    document.getElementById('scanBtn').disabled = false;
-    document.getElementById('scanBtn').innerText = 'Scan Current Page';
+    resultBox.className = 'BLOCKED';
+    
+    const threatLevel = document.getElementById('threatLevel');
+    if (threatLevel) threatLevel.innerText = "ERROR";
+    
+    const threatScore = document.getElementById('threatScore');
+    if (threatScore) threatScore.innerText = "--";
+    
+    const summary = document.getElementById('summary');
+    if (summary) summary.innerText = msg;
+    
+    const evidenceList = document.getElementById('evidence');
+    if (evidenceList) evidenceList.innerHTML = '';
+    
+    const scanBtn = document.getElementById('scanBtn');
+    if (scanBtn) {
+        scanBtn.disabled = false;
+        scanBtn.innerText = 'Retry Connection';
+    }
 }
 

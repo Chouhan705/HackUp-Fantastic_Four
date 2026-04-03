@@ -107,7 +107,7 @@ async function runSentryCheck(url, domainAge) {
       const hostname = urlObj.hostname;
       const rootDomain = getRootDomain(hostname);
 
-        const PROFESSIONAL_PLATFORMS = ['eventbrite.com', 'zoom.us', 'microsoft.com', 'huggingface.co', 'notion.com', 'notion.site', 'notion.so', 'ngrok.com', 'ngrok.ai', 'google.com'];
+        const PROFESSIONAL_PLATFORMS = ['eventbrite.com', 'zoom.us', 'microsoft.com', 'huggingface.co', 'notion.com', 'notion.site', 'notion.so', 'ngrok.com', 'ngrok.ai', 'google.com', 'itch.io'];
 
       if (PROFESSIONAL_PLATFORMS.includes(rootDomain)) {
           console.log(`[Layer 2: The Prober] Short-circuiting ML for trusted platform: ${rootDomain}`);
@@ -193,7 +193,7 @@ async function localProber(email) {
   for (const url of cleanUrls) {
     // In a real environment, you'd get domainAge from local cache or pre-check.
     // Here we assume unknown/neutral if not passed previously.
-    const risk = await runSentryCheck(url, 30);
+    const risk = await runSentryCheck(url, 365);
     if (risk > maxRisk) maxRisk = risk;
   }
 
