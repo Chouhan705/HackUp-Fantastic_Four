@@ -66,7 +66,7 @@ def generate_synthetic_data(n_samples=20000):
         path = "".join(random.choices("abcdefghijklmnopqrstuvwxyz/", k=10)) if random.random() > 0.5 else "login=1&user=test"
         url = f"https://{domain}/{path}"
         # Make safe features look safe
-        feature_vector = extract_9_features(url, random.randint(500, 3000))     
+        feature_vector = extract_9_features(url, random.choice([random.randint(500, 3000), random.randint(10, 100)]))     
         # Ensure has_https is overwhelmingly 1
         X.append(feature_vector)
         y.append(0)
@@ -76,7 +76,7 @@ def generate_synthetic_data(n_samples=20000):
         domain = f"secure-update-{random.randint(100,999)}.net" if random.random() > 0.2 else f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
         protocol = "http" if random.random() > 0.5 else "https"
         url = f"{protocol}://{domain}/{path}"
-        feature_vector = extract_9_features(url, random.randint(0, 30))
+        feature_vector = extract_9_features(url, random.choice([random.randint(0, 30), random.randint(400, 2000)]))
         # Enforce popular domain = 0 for most explicitly risky generated ones to teach it the distinction
         feature_vector[-2] = 0 # -2 is now is_popular
         X.append(feature_vector)
