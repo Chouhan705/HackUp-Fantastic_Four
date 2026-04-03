@@ -54,22 +54,57 @@ function displayVerdict(verdict) {
     
     // Clear old colors and set the new one
     resultBox.className = '';
-    resultBox.classList.add(verdict.threat_level);
-    
-    threatHeader.innerText = `${verdict.threat_level} (Score: ${verdict.final_risk_score})`;
-    threatHeader.style.color = (verdict.threat_level === 'Critical' || verdict.threat_level === 'Dangerous') ? 'red' : 'green';
-    
-    document.getElementById('summary').innerText = verdict.user_friendly_summary;
+    resultBox.classList.add(verdict.status);
+
+    threatHeader.innerText = `${verdict.status} (Score: ${verdict.score})`;     
+    threatHeader.style.color = (verdict.status === 'BLOCKED' || verdict.status === 'WARNING') ? 'red' : 'green';
+
+    document.getElementById('summary').innerText = verdict.recommendation;      
 
     const evidenceList = document.getElementById('evidence');
     evidenceList.innerHTML = '';
-    verdict.key_evidence.forEach(item => {
-        const li = document.createElement('li');
-        li.innerText = item;
-        evidenceList.appendChild(li);
-    });
+    
+    // Add logic path and forensics to evidence
+    const pathLi = document.createElement('li');
+    pathLi.innerText = `Logic Path: ${verdict.logic_path}`;
+    evidenceList.appendChild(pathLi);
 
-    scanBtn.disabled = false;
+    if (verdict.forensics) {
+        if (verdict.forensics.trust_deficit) {
+            const li = document.createElement('li');
+            li.innerText = 'Trust Deficit Detected';
+            evidenceList.appendChild(li);
+        }
+        if (verdict.forensics.url_obfuscated) {
+             const li = document.createElement('li');
+             li.innerText = 'URL Obfuscation Detected';
+             evidenceList.appendChild(li);
+        }
+        if (verdict.forensics.behavior_flags && verdict.forensics.behavior_flags.length > 0) {
+            verdict.forensics.behavior_flags.forEach(flag => {
+                const li = document.createElement('li');
+                li.innerText = `Flag: ${flag}`;
+                evidenceList.appendChild(li);
+            });
+        }
+        if (verdict.forensics.reason) {
+            const li = document.createElement('li');
+            li.innerText = `Reason: ${verdict.forensics.reason}`;
+            evidenceList.appendChild(li);
+        }
+        if (verdict.forensics.evidence) {
+            verdict.forensics.evidence.forEach(evi => {
+                const li = document.createElement('li');
+                li.innerText = `Evidence: ${evi}`;
+                evidenceList.appendChild(li);
+            });
+        }
+        if (verdict.forensics.error) {
+            const li = document.createElement('li');
+            li.innerText = `Error Check: ${verdict.forensics.error}`;
+            evidenceList.appendChild(li);
+        }
+    }
     scanBtn.innerText = 'Scan Again';
 }
 
@@ -87,3 +122,4 @@ function displayError(msg) {
     document.getElementById('scanBtn').disabled = false;
     document.getElementById('scanBtn').innerText = 'Scan Current Page';
 }
+

@@ -7,7 +7,7 @@ const dns = require('dns').promises; // ⬅️ Native Node.js DNS module
 // 🛑 HACKATHON MASTER TOGGLE 🛑
 // Set to 1 to enable Gemini AI. Set to 0 to bypass LLMs and save billing.
 // ==========================================
-const USE_AI_SWARM = 0; 
+const USE_AI_SWARM = 1; 
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { extractData } = require('./extraction'); 

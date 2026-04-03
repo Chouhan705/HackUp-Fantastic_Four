@@ -1,236 +1,153 @@
-// ================= CORE DATA =================
-let scanHistory = [];
-let vectorChart = null;
-let currentChartType = 'bar'; // Default view for Analytics
-
-// ================= INITIALIZATION =================
-document.addEventListener('DOMContentLoaded', () => {
-    initNavigation();
-    loadData();
-});
-
-/**
- * Loads forensic data from Chrome storage and triggers UI refresh
- */
-function loadData() {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['scanHistory'], (res) => {
-            scanHistory = res.scanHistory || [];
-            console.log(`📊 [Dashboard] Loaded ${scanHistory.length} forensic records.`);
-            refreshUI();
-        });
-    }
-}
-
-/**
- * Updates all widgets and charts with the latest storage data
- */
-function refreshUI() {
-    updateStats();
-    updateActivityTable();
-    updateAiInsights();
-    initCharts(); // Initialize Overview charts
-}
-
-// ================= NAVIGATION =================
-function initNavigation() {
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            // UI State Management
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            item.classList.add('active');
-
-            const sectionId = 'section-' + item.dataset.section;
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-
-            // Update Header Title
-            document.getElementById('pageTitle').textContent = item.textContent.trim();
-
-            // Lazy Load specialized components
-            if (item.dataset.section === 'analytics') {
-                // Short delay to allow DOM transition before Chart.js renders
-                setTimeout(() => initVectorChart(), 50);
-            }
-            if (item.dataset.section === 'geo') initMap();
-        });
-    });
-}
-
-// ================= WIDGET LOGIC =================
-
-/**
- * Calculates real-time stats based on Judge Agent's scores
- */
-function updateStats() {
-    const total = scanHistory.length;
-    const phish = scanHistory.filter(s => s.final_risk_score >= 70).length;
-    const safe = scanHistory.filter(s => s.final_risk_score < 40).length;
-    const rate = total > 0 ? ((safe / total) * 100).toFixed(1) : 100;
-
-    document.getElementById('statTotal').textContent = total.toLocaleString();
-    document.getElementById('statPhish').textContent = phish;
-    document.getElementById('statSafe').textContent = safe;
-    document.getElementById('statRate').textContent = rate + '%';
-}
-
-/**
- * Renders interactive activity log. Clicking a row opens that email's report.
- */
-function updateActivityTable() {
-    const tbody = document.getElementById('activityTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    // Show most recent scans first
-    scanHistory.slice().reverse().forEach(entry => {
-        const score = entry.final_risk_score || 0;
-        const status = score >= 70 ? 'red' : score >= 40 ? 'yellow' : 'green';
-        
-        const row = document.createElement('tr');
-        row.style.cursor = 'pointer';
-        row.innerHTML = `
-            <td>${entry.date || 'Recent'}</td>
-            <td>${entry.subject}</td>
-            <td>${entry.sender.split('<')[0]}</td>
-            <td class="${status}">${score}%</td>
-            <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
-        `;
-
-        // Redirect to the individual report view
-        row.addEventListener('click', () => {
-            chrome.storage.local.set({ lastReport: entry }, () => {
-                window.location.href = 'report.html';
-            });
-        });
-
-        tbody.appendChild(row);
-    });
-}
-
-function updateAiInsights() {
-    const container = document.getElementById('aiInsightsGrid');
-    if (!container) return;
-    
-    const threats = scanHistory.filter(s => s.final_risk_score >= 70).slice(0, 3);
-    
-    if (threats.length === 0) {
-        container.innerHTML = '<div class="card ai-card"><div class="ai-card-body">No active threats detected in history.</div></div>';
-        return;
-    }
-
-    container.innerHTML = threats.map(t => `
-        <div class="card ai-card">
-            <div class="card-title">Threat Detected</div>
-            <div class="ai-card-body">${t.user_friendly_summary}</div>
-            <div class="pill red" style="margin-top:10px; width:fit-content">CRITICAL</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PhishGuard — Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+<body>
+ 
+<div class="pg-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      <span>PHISHGUARD</span>
+    </div>
+ 
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-section="overview" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" data-section="analytics" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </a>
+      <a class="nav-item" data-section="geo" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Geo Threats
+      </a>
+      <a class="nav-item" data-section="activity" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Activity
+      </a>
+      <a class="nav-item" data-section="ai" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        AI Insights
+      </a>
+    </nav>
+ 
+    <div class="sidebar-footer">
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        LIVE MONITORING
+      </div>
+    </div>
+  </aside>
+ 
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Overview</h1>
+        <span class="page-sub">Real-time threat intelligence</span>
+      </div>
+      <div class="topbar-right">
+        <div id="globalThreatBadge" class="threat-level-badge">
+          <span class="tl-dot"></span>
+          <span id="globalThreatText">SYSTEM READY</span>
         </div>
-    `).join('');
-}
-
-// ================= CHARTING (VECTOR ANALYSIS) =================
-
-/**
- * Initializes the specialized Forensic Vector Chart
- */
-function initVectorChart() {
-    const canvas = document.getElementById('vectorChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    
-    if (vectorChart) vectorChart.destroy();
-
-    vectorChart = new Chart(ctx, {
-        type: currentChartType,
-        data: {
-            labels: scanHistory.map((_, i) => `Scan ${i+1}`),
-            datasets: [
-                {
-                    label: 'DNA (Auth)',
-                    data: scanHistory.map(s => s.dna_evidence?.auth_score || 0),
-                    backgroundColor: '#ff4d4d',
-                    borderColor: '#ff4d4d',
-                    tension: 0.3
-                },
-                {
-                    label: 'Links (Typosquat)',
-                    data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0),
-                    backgroundColor: '#ffd60a',
-                    borderColor: '#ffd60a',
-                    tension: 0.3
-                },
-                {
-                    label: 'Profiling (Social)',
-                    data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0),
-                    backgroundColor: '#30d158',
-                    borderColor: '#30d158',
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { stacked: currentChartType === 'bar' },
-                y: { stacked: currentChartType === 'bar', beginAtZero: true, max: currentChartType === 'bar' ? undefined : 100 }
-            },
-            plugins: { legend: { display: true, position: 'bottom' } }
-        }
-    });
-
-    // Only set up listeners once
-    if (!window.chartListenersInit) {
-        setupVectorControls();
-        window.chartListenersInit = true;
-    }
-}
-
-function setupVectorControls() {
-    // Switch between Bar and Line
-    document.getElementById('toggleChartType').addEventListener('click', (e) => {
-        currentChartType = currentChartType === 'bar' ? 'line' : 'bar';
-        e.target.textContent = `Switch to ${currentChartType === 'bar' ? 'Line Graph' : 'Bar Chart'}`;
-        initVectorChart();
-    });
-
-    // Vector Visibility Toggles
-    document.querySelectorAll('.vector-toggle input').forEach((cb, index) => {
-        cb.addEventListener('change', () => {
-            const checked = Array.from(document.querySelectorAll('.vector-toggle input')).filter(c => c.checked);
-            if (checked.length === 0) {
-                cb.checked = true; // "At Least One" Rule
-                return;
-            }
-            vectorChart.setDatasetVisibility(index, cb.checked);
-            vectorChart.update();
-        });
-    });
-}
-
-function initCharts() {
-    // Overview Line Chart (Risk Score History)
-    const ctx = document.getElementById('lineChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: scanHistory.map((_, i) => i + 1),
-            datasets: [{
-                label: 'Risk Score',
-                data: scanHistory.map(s => s.final_risk_score),
-                borderColor: '#ff4d4d',
-                backgroundColor: 'rgba(255, 77, 77, 0.1)',
-                fill: true
-            }]
-        }
-    });
-}
-
-let map = null;
-function initMap() {
-    if (map) return;
-    map = L.map('map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-}
+      </div>
+    </div>
+ 
+    <section class="section active" id="section-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon scan">🔍</div>
+          <div class="stat-body">
+            <div class="stat-label">Total Scanned</div>
+            <div class="stat-value" id="statTotal">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon phish">⚠</div>
+          <div class="stat-body">
+            <div class="stat-label">Phishing Detected</div>
+            <div class="stat-value red" id="statPhish">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon safe">✓</div>
+          <div class="stat-body">
+            <div class="stat-label">Safe Emails</div>
+            <div class="stat-value green" id="statSafe">0</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon threat">📈</div>
+          <div class="stat-body">
+            <div class="stat-label">Clean Rate</div>
+            <div class="stat-value" id="statRate">0%</div>
+          </div>
+        </div>
+      </div>
+ 
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Threat Timeline</span></div>
+          <canvas id="lineChart" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Risk Distribution</span></div>
+          <canvas id="doughnutChart" height="160"></canvas>
+        </div>
+      </div>
+    </section>
+    <section class="section" id="section-analytics">
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Forensic Vector Analysis</span>
+          <div class="chart-controls">
+            <button id="toggleChartType" class="pill yellow">Switch to Line Graph</button>
+            <label class="vector-toggle"><input type="checkbox" checked value="dna"> DNA</label>
+            <label class="vector-toggle"><input type="checkbox" checked value="links"> Links</label>
+            <label class="vector-toggle"><input type="checkbox" checked value="profiler"> Profile</label>
+          </div>
+        </div>
+        <canvas id="vectorChart" height="140"></canvas>
+      </div>
+    </section>
+ 
+    <section class="section" id="section-geo">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Live Attack Origins</span></div>
+        <div id="map" style="height: 400px; border-radius: 8px;"></div>
+      </div>
+    </section>
+ 
+    <section class="section" id="section-activity">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Forensic Log</span></div>
+        <table class="activity-table">
+          <thead>
+            <tr><th>Time</th><th>Subject</th><th>Sender</th><th>Score</th><th>Status</th></tr>
+          </thead>
+          <tbody id="activityTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+ 
+    <section class="section" id="section-ai">
+      <div class="ai-insights-grid" id="aiInsightsGrid"></div>
+    </section>
+  </main>
+</div>
+ 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

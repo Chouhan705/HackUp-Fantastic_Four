@@ -1,62 +1,80 @@
-/**
- * Layer 5: The Judge (Gemini 2.0 Flash)
- * Final Verdict: Aggregates all reports, resolves conflicts between agents, and writes the user-friendly explanation.
- */
+﻿module.exports = {
+  finalJudge: function finalJudge(email, executionContext, agentReports) {
+    const facts = executionContext.facts || {};
+    let overrideReason = null;
 
-// Hard Facts > AI Intuition: If a URL is on a blacklist or a domain is < 24 hours old, the risk is CRITICAL.
-// Consensus: If two agents flag an email but one doesn't, the Judge must explain the discrepancy.
+    // Rule 1: Safe Browsing Blacklist -> CRITICAL
+    if (facts.safe_browsing && facts.safe_browsing.url_reputation === 'malicious') {
+        return {
+            status: 'BLOCKED',
+            score: 100,
+            logic_path: 'Hard Rule -> Blacklisted URL',
+            forensics: { behavior_flags: ['URL found on reputable blacklist.'] },
+            recommendation: 'DO NOT CLICK. A link in this email is known to distribute malware or phishing.'
+        };
+    }
 
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+    // Rule 2: Critical Rule Triggered from Contradiction Engine
+    if (executionContext.criticalRuleTriggered) {
+        return {
+            status: 'BLOCKED',
+            score: 100,
+            logic_path: 'Hard Rule -> Critical Contradiction',
+            forensics: { behavior_flags: [executionContext.contradictionReason || 'Critical contradiction found'] },
+            recommendation: 'DO NOT CLICK. ' + (executionContext.contradictionReason || 'High risk of phishing.')
+        };
+    }
 
-async function finalJudge(email, executionContext, agentReports) {
-  const { facts, prober_score } = executionContext;
-  console.log(`[Layer 5: The Judge] The Final Judge is reviewing evidence...`);
-  
-  // 1. Hard Facts Override
-  let criticalOverride = false;
-  let overrideReason = "";
+    // Rule 3: Suspicious Contradiction from Contradiction Engine
+    if (executionContext.hasSuspiciousContradiction) {
+         // Elevate base score because trusted sender is pointing to unknown infra
+         return {
+            status: 'WARNING',
+            score: 85,
+            logic_path: 'Hard Rule -> Suspicious Contradiction',
+            forensics: { behavior_flags: [executionContext.contradictionReason || 'Suspicious routing from trusted sender', 'Agent Evaluation Required'] },
+            recommendation: 'Proceed with extreme caution. The sender is verified, but the links lead to unexpected destinations.'
+        };
+    }
 
-  if (facts.whois.domain_age_days < 1 && facts.whois.domain_age_days !== "Unknown") {
-    criticalOverride = true;
-    overrideReason = `The sender domain is less than 24 hours old. Highly suspicious.`;
+    // Scored evaluation (Fallback for ambiguous cases)
+    let final_risk_score = 20;
+
+    // URL score (ML Prober contribution is capped)
+    if (executionContext.prober_score && executionContext.prober_score.riskScore) {
+       final_risk_score += (executionContext.prober_score.riskScore * 0.3); // max ~ 30
+    }
+
+    // Sentry behavior flags
+    let sentry_flags = executionContext.sentry_flags || [];
+    if (sentry_flags.includes('obfuscation_detected')) final_risk_score += 15;
+    if (sentry_flags.includes('high_urgency')) final_risk_score += 10;
+
+    // Agent Risks
+    const agentRisks = [
+      (agentReports && agentReports.dna ? agentReports.dna.risk : 'unknown'),
+      (agentReports && agentReports.links ? agentReports.links.risk : 'unknown'),
+      (agentReports && agentReports.profiler ? agentReports.profiler.risk : 'unknown')
+    ];
+    
+    // Add up to 30 points for Agent warnings
+    let agent_score = agentRisks.filter(r => r === 'high' || r === 'critical').length * 10;
+    if (agent_score > 30) agent_score = 30;
+    final_risk_score += agent_score;
+
+    if (final_risk_score > 100) final_risk_score = 100;
+    
+    let status = final_risk_score >= 80 ? 'BLOCKED' : (final_risk_score >= 40 ? 'WARNING' : 'SAFE');
+    
+    return {
+        status: status,
+        score: Math.round(final_risk_score),
+        logic_path: 'Scoring Engine',
+        forensics: {
+            behavior_flags: [...sentry_flags, ...agentRisks.filter(r => r !== 'unknown').map(r => 'Agent Risk: ' + r)]
+        },
+        recommendation: `Engine assessed score ${Math.round(final_risk_score)}.`
+    };
   }
-  
-  if (facts.safe_browsing.url_reputation === "malicious") {
-    criticalOverride = true;
-    overrideReason += ` URL found on known blacklist.`;
-  }
+};
 
-  // 2. Aggregate Agent Results
-  // Safely extract risk levels, defaulting to "unknown" if an agent failed
-  const dnaRisk = agentReports?.dna?.risk || "unknown";
-  const linksRisk = agentReports?.links?.risk || "unknown";
-  const profilerRisk = agentReports?.profiler?.risk || "unknown";
-
-  const riskLevels = [dnaRisk, linksRisk, profilerRisk];
-  const flagCount = riskLevels.filter(r => r === "high" || r === "critical").length;
-  
-  let discrepancySummary = null;
-  if (flagCount === 2 && riskLevels.includes("low")) {
-      discrepancySummary = "Discrepancy: Two agents flagged severe risks, but one reported low risk. Overriding to Suspicious based on majority.";
-  }
-
-  // Final Output Construction Schema
-  // This simulates the structured output that Gemini 2.0 Flash would be forced to return via constraint formatting.
-  const finalVerdict = {
-      final_risk_score: criticalOverride ? 95 : (flagCount * 30 + 10),
-      threat_level: criticalOverride ? "Critical" : (flagCount > 1 ? "Dangerous" : "Safe"),
-      user_friendly_summary: criticalOverride ? `DO NOT CLICK. ${overrideReason}` : `This email appears ${flagCount > 0 ? "suspicious" : "safe"}. Please verify the sender.`,
-      key_evidence: [
-          overrideReason || null,
-          agentReports?.dna?.finding || "DNA checks unavailable.",
-          agentReports?.links?.finding || "Link checks unavailable.",
-          agentReports?.profiler?.finding || "Behavioral checks unavailable."
-      ].filter(Boolean),
-      agent_reports: agentReports,
-      notes: discrepancySummary
-  };
-  
-  return finalVerdict;
-}
-
-module.exports = { finalJudge };

@@ -19,6 +19,15 @@ const safeEmail = {
   urls: ['https://github.com/trendings']
 };
 
+const nasaEmail = {
+  headers: {
+    from: 'hq-rsvp@nasa.gov',
+    replyTo: 'hq-rsvp@nasa.gov'
+  },
+  body: "NASA test",
+  urls: ['https://www.nasa.gov/virtual-guest']
+};
+
 async function runTests() {
   console.log("=== Testing Malicious Email ===");
   const maliciousResult = await analyzeEmail(maliciousEmail);
@@ -27,6 +36,10 @@ async function runTests() {
   console.log("\n=== Testing Safe Email ===");
   const safeResult = await analyzeEmail(safeEmail);
   console.log(JSON.stringify(safeResult, null, 2));
+
+  console.log("\n=== Testing NASA Direct Match ===");
+  const nasaResult = await analyzeEmail(nasaEmail);
+  console.log(JSON.stringify(nasaResult, null, 2));
 }
 
 runTests();

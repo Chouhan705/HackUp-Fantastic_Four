@@ -54,7 +54,12 @@ function initNavigation() {
                 // Short delay to allow DOM transition before Chart.js renders
                 setTimeout(() => initVectorChart(), 50);
             }
-            if (item.dataset.section === 'geo') initMap();
+            const section = item.dataset.section;
+            if (section === 'analytics') {
+                // Re-init or update chart when the section becomes visible
+                setTimeout(() => initVectorChart(), 50); 
+            }
+            if (section === 'geo') initMap();
         });
     });
 }
@@ -142,59 +147,69 @@ function initVectorChart() {
     
     if (vectorChart) vectorChart.destroy();
 
+    const datasets = [
+        {
+            label: 'DNA (Auth)',
+            data: scanHistory.map(s => s.dna_evidence?.auth_score || 0),
+            backgroundColor: '#ff4d4d',
+            borderColor: '#ff4d4d',
+            hidden: false
+        },
+        {
+            label: 'Links (Typosquat)',
+            data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0),
+            backgroundColor: '#ffd60a',
+            borderColor: '#ffd60a',
+            hidden: false
+        },
+        {
+            label: 'Profiling (Social Eng)',
+            data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0),
+            backgroundColor: '#30d158',
+            borderColor: '#30d158',
+            hidden: false
+        }
+    ];
+
     vectorChart = new Chart(ctx, {
         type: currentChartType,
         data: {
             labels: scanHistory.map((_, i) => `Scan ${i+1}`),
-            datasets: [
-                {
-                    label: 'DNA (Auth)',
-                    data: scanHistory.map(s => s.dna_evidence?.auth_score || 0),
-                    backgroundColor: '#ff4d4d',
-                    borderColor: '#ff4d4d',
-                    tension: 0.3
-                },
-                {
-                    label: 'Links (Typosquat)',
-                    data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0),
-                    backgroundColor: '#ffd60a',
-                    borderColor: '#ffd60a',
-                    tension: 0.3
-                },
-                {
-                    label: 'Profiling (Social)',
-                    data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0),
-                    backgroundColor: '#30d158',
-                    borderColor: '#30d158',
-                    tension: 0.3
-                }
-            ]
+            datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
                 x: { stacked: currentChartType === 'bar' },
-                y: { stacked: currentChartType === 'bar', beginAtZero: true, max: currentChartType === 'bar' ? undefined : 100 }
+                y: { 
+                    stacked: currentChartType === 'bar',
+                    beginAtZero: true,
+                    max: currentChartType === 'bar' ? undefined : 100 
+                }
             },
-            plugins: { legend: { display: true, position: 'bottom' } }
+            plugins: {
+                legend: { display: false } // We use custom toggles instead
+            }
         }
     });
 
-    // Only set up listeners once
-    if (!window.chartListenersInit) {
+    if (!window.chartListenersSetup) {
         setupVectorControls();
-        window.chartListenersInit = true;
+        window.chartListenersSetup = true;
     }
 }
 
 function setupVectorControls() {
     // Switch between Bar and Line
-    document.getElementById('toggleChartType').addEventListener('click', (e) => {
-        currentChartType = currentChartType === 'bar' ? 'line' : 'bar';
-        e.target.textContent = `Switch to ${currentChartType === 'bar' ? 'Line Graph' : 'Bar Chart'}`;
-        initVectorChart();
-    });
+    const toggleBtn = document.getElementById('toggleChartType');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+            currentChartType = currentChartType === 'bar' ? 'line' : 'bar';
+            e.target.textContent = `Switch to ${currentChartType === 'bar' ? 'Line Graph' : 'Bar Chart'}`;
+            initVectorChart();
+        });
+    }
 
     // Vector Visibility Toggles
     document.querySelectorAll('.vector-toggle input').forEach((cb, index) => {
@@ -212,7 +227,9 @@ function setupVectorControls() {
 
 function initCharts() {
     // Overview Line Chart (Risk Score History)
-    const ctx = document.getElementById('lineChart').getContext('2d');
+    const canvas = document.getElementById('lineChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     new Chart(ctx, {
         type: 'line',
         data: {
@@ -231,6 +248,8 @@ function initCharts() {
 let map = null;
 function initMap() {
     if (map) return;
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
     map = L.map('map').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 }
