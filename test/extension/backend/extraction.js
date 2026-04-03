@@ -1,140 +1,82 @@
 // extraction.js
-// Ported from extraction.py — extracts phishing features and computes a risk score
- 
 const cheerio = require('cheerio');
 const { URL } = require('url');
- 
+
 const SHORTENERS  = ['bit.ly', 'goo.gl', 't.co', 'tinyurl.com', 'is.gd', 'ow.ly', 'buff.ly'];
 const BRANDS      = ['google', 'netflix', 'paypal', 'amazon', 'microsoft', 'upi', 'paytm', 'apple', 'facebook'];
 const URGENCY_KW  = ['urgent', 'suspend', 'restricted', 'unauthorized', 'action required', 'login now', 'verify', 'security alert'];
- 
-// Mirrors extract_ml_features() from extraction.py
-function extractFeatures(mailObj) {
+
+function extractData(mailObj) {
   let html = mailObj.full_html || '';
   if (!html) html = `<html><body>${mailObj.snippet || ''}</body></html>`;
- 
+
   const $ = cheerio.load(html);
   const textContent = $.text().toLowerCase();
- 
+  const cleanTextForAI = $.text().replace(/\s+/g, ' ').trim(); // Cleaned for Agent C
+
   const features = {
-    url_count:           0,
-    ip_as_url:           0,
-    shortened_url:       0,
-    link_mismatch:       0,
-    urgency_score:       0,
+    url_count: 0,
+    ip_as_url: 0,
+    shortened_url: 0,
+    link_mismatch: 0,
+    urgency_score: 0,
     brand_impersonation: 0,
-    has_form:            $('form').length > 0 ? 1 : 0,
-    has_password_input:  $('input[type="password"]').length > 0 ? 1 : 0,
+    has_form: $('form').length > 0 ? 1 : 0,
+    has_password_input: $('input[type="password"]').length > 0 ? 1 : 0,
   };
- 
-  // ── URL Analysis (mirrors the for-loop in extraction.py) ──────────────────
+
+  const extractedUrls = []; // Clean array for Agent B
+
+  // ── URL Analysis ──────────────────
   const links = $('a[href]').toArray();
   features.url_count = links.length;
- 
+
   for (const el of links) {
-    const href      = $(el).attr('href') || '';
-    const linkText  = $(el).text().toLowerCase();
-    let domain      = '';
- 
+    const href = $(el).attr('href') || '';
+    extractedUrls.push(href);
+    
+    const linkText = $(el).text().toLowerCase();
+    let domain = '';
+
     try {
       domain = new URL(href).hostname.toLowerCase();
     } catch {
-      // relative or malformed URL — skip domain checks
+      continue;
     }
- 
-    // IP-based URL
+
     if (/\d+\.\d+\.\d+\.\d+/.test(domain)) features.ip_as_url = 1;
- 
-    // Shortened URL
     if (SHORTENERS.some(s => domain.includes(s))) features.shortened_url += 1;
- 
-    // Link mismatch: anchor text mentions a brand but href domain does not
-    if (
-      BRANDS.some(b => linkText.includes(b)) &&
-      domain &&
-      !BRANDS.some(b => domain.includes(b))
-    ) {
+    
+    if (BRANDS.some(b => linkText.includes(b)) && domain && !BRANDS.some(b => domain.includes(b))) {
       features.link_mismatch += 1;
     }
   }
- 
-  // ── NLP Features ──────────────────────────────────────────────────────────
-  features.urgency_score       = URGENCY_KW.filter(w => textContent.includes(w)).length;
+
+  // ── NLP Features ──────────────────
+  features.urgency_score = URGENCY_KW.filter(w => textContent.includes(w)).length;
   features.brand_impersonation = BRANDS.filter(b => textContent.includes(b)).length;
- 
-  return features;
-}
- 
-// ── Risk Score Calculator ─────────────────────────────────────────────────────
-// Weighted scoring that maps features → 0–100 phishing risk %
-// Weights inspired by the comments in extraction.py (URL 25%, NLP 20%, Form 15%)
-function computeRiskScore(features) {
-  let score = 0;
- 
-  // URL signals (max ~40 pts)
-  if (features.ip_as_url)               score += 25;
-  if (features.link_mismatch > 0)       score += 20;
-  if (features.shortened_url > 0)       score += 10;
-  if (features.url_count > 5)           score += 5;
- 
-  // NLP signals (max ~30 pts)
-  score += Math.min(features.urgency_score * 7, 21);       // up to 3 hits = 21pts
-  score += Math.min(features.brand_impersonation * 3, 9);  // up to 3 brands = 9pts
- 
-  // Form / credential harvesting signals (max ~15 pts)
-  if (features.has_form)           score += 8;
-  if (features.has_password_input) score += 7;
- 
-  return Math.min(Math.round(score), 100);
-}
- 
-// ── Threat Level ──────────────────────────────────────────────────────────────
-function getThreatLevel(score) {
-  if (score >= 70) return 'CRITICAL';
-  if (score >= 40) return 'MODERATE';
-  return 'SAFE';
-}
- 
-// ── Human-readable findings ───────────────────────────────────────────────────
-function buildFindings(features, mailObj) {
-  const findings = [];
- 
-  if (features.ip_as_url)
-    findings.push('IP address used as URL — hides real destination');
-  if (features.link_mismatch > 0)
-    findings.push(`${features.link_mismatch} link(s) mismatch brand text vs actual domain`);
-  if (features.shortened_url > 0)
-    findings.push(`${features.shortened_url} shortened URL(s) detected — destination hidden`);
-  if (features.urgency_score > 0)
-    findings.push(`${features.urgency_score} urgency keyword(s) found (e.g. "verify", "suspend")`);
-  if (features.brand_impersonation > 0)
-    findings.push(`Impersonates ${features.brand_impersonation} known brand(s)`);
-  if (features.has_form)
-    findings.push('Contains an HTML form — possible credential harvesting');
-  if (features.has_password_input)
-    findings.push('Password input field detected in email body');
- 
-  return findings.length > 0 ? findings : ['No major indicators found'];
-}
- 
-// ── Main export ───────────────────────────────────────────────────────────────
-function analyzeEmail(mailObj) {
-  const features    = extractFeatures(mailObj);
-  const score       = computeRiskScore(features);
-  const threatLevel = getThreatLevel(score);
-  const findings    = buildFindings(features, mailObj);
- 
+
+  // ── Compute Baseline Score ────────
+  let heuristicScore = 0;
+  if (features.ip_as_url) heuristicScore += 25;
+  if (features.link_mismatch > 0) heuristicScore += 20;
+  if (features.shortened_url > 0) heuristicScore += 10;
+  if (features.url_count > 5) heuristicScore += 5;
+  heuristicScore += Math.min(features.urgency_score * 7, 21);
+  heuristicScore += Math.min(features.brand_impersonation * 3, 9);
+  if (features.has_form) heuristicScore += 8;
+  if (features.has_password_input) heuristicScore += 7;
+  heuristicScore = Math.min(Math.round(heuristicScore), 100);
+
   return {
-    id:           mailObj.id,
-    subject:      mailObj.subject,
-    sender:       mailObj.sender,
-    date:         mailObj.date,
-    snippet:      mailObj.snippet,
-    score,
-    threatLevel,
-    findings,
-    features,     // raw features — useful for full forensic report
+    headers: mailObj.headers || "",
+    sender: mailObj.sender || "",
+    subject: mailObj.subject || "",
+    clean_text: cleanTextForAI,
+    urls: extractedUrls,
+    heuristic_features: features,
+    heuristic_score: heuristicScore
   };
 }
- 
-module.exports = { analyzeEmail };
+
+module.exports = { extractData };

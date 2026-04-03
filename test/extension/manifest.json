@@ -14,7 +14,7 @@
     "http://localhost:3000/*"
   ],
   "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+    "client_id": "486445099317-a1sv28cc1b5vbf6qcvcrbsmt3kpb9o2b.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/gmail.readonly",
       "openid",
