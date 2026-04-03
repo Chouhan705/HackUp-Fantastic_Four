@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PhishGuard Dashboard</title>
+
+  <link rel="stylesheet" href="dashboard.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <h2>🛡️ PhishGuard</h2>
+    <nav>
+      <span class="active">Overview</span>
+      <span>Analytics</span>
+      <span>Campaigns</span>
+      <span>Geo Threats</span>
+      <span>Activity</span>
+      <span>AI Insights</span>
+    </nav>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="card">
+      <h4>Emails Scanned</h4>
+      <h2>1,284</h2>
+      <span class="green">+12%</span>
+    </div>
+
+    <div class="card">
+      <h4>Phishing Detected</h4>
+      <h2>47</h2>
+      <span class="green">+8 today</span>
+    </div>
+
+    <div class="card">
+      <h4>Safe Emails</h4>
+      <h2>1,198</h2>
+      <span>93.3%</span>
+    </div>
+
+    <div class="card">
+      <h4>Threat Level</h4>
+      <h2 class="danger">Elevated</h2>
+      <span class="green">Active</span>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="card large">
+      <h3>Phishing Attempts Over Time</h3>
+      <canvas id="lineChart"></canvas>
+    </div>
+
+    <div class="card large">
+      <h3>Attack Types</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 🌍 MAP -->
+  <div class="card large">
+    <h3>🌍 Geo Threat Intelligence</h3>
+    <div id="map"></div>
+  </div>
+
+  <!-- LOWER -->
+  <div class="bottom">
+    <div class="card">
+      <h3>Geo Threat Origins</h3>
+      <ul>
+        <li>Eastern Europe <span class="red">Phishing</span></li>
+        <li>Southeast Asia <span class="yellow">Suspicious</span></li>
+        <li>West Africa <span class="red">Phishing</span></li>
+        <li>South America <span class="green">Safe</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <ul>
+        <li>Verify PayPal account <span class="red">Phishing</span></li>
+        <li>Meeting notes <span class="green">Safe</span></li>
+        <li>Invoice #4892 <span class="yellow">Suspicious</span></li>
+        <li>Delivery update <span class="red">Phishing</span></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script src="dashboard.js"></script>
+</body>
+</html>

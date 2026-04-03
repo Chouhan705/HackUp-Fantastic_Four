@@ -1,0 +1,79 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1220;
+  color: #fff;
+}
+
+.container {
+  padding: 20px;
+}
+
+/* HEADER */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+nav span {
+  margin: 0 10px;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+nav .active {
+  opacity: 1;
+  font-weight: bold;
+}
+
+/* CARD */
+.card {
+  background: #121a2f;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 10px;
+}
+
+/* GRID */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* MAP */
+#map {
+  height: 400px;
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+/* COLORS */
+.red { color: #ff4d4d; }
+.green { color: #00cc66; }
+.yellow { color: #ffcc00; }
+.danger { color: #ff4d4d; }
+
+/* LIST */
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #1f2a40;
+}
