@@ -8,6 +8,7 @@
 const ort = require('onnxruntime-node');
 const fs = require('fs');
 const path = require('path');
+const murmurhash = require('murmurhash');
 
 let cachedSession = null;
 let popularDomainsFilter = null;
@@ -26,32 +27,21 @@ function loadBloomFilter() {
   }
 }
 
-function hashCode(str) {
-    let hash = 0;
-    for (let i = 0, len = str.length; i < len; i++) {
-        let chr = str.charCodeAt(i);
-        hash = (hash << 5) - hash + chr;
-        hash |= 0;
-    }
-    return hash;
-}
-
 function checkPopularity(hostname) {
   loadBloomFilter();
   if (!popularDomainsFilter) return false;
-  
+
   try {
     const rootDomain = hostname.replace(/^www\./, '').toLowerCase();
-    
+
     for (let i = 0; i < popularDomainsFilter.k; i++) {
-        const mockDigest = Math.abs(hashCode(rootDomain + i)); 
-        const digest = mockDigest; // REPLACE with murmurhash3
-        
+        const digest = murmurhash.v3(rootDomain, i);
+
         const bitIndex = digest % popularDomainsFilter.m;
         const arrayIndex = Math.floor(bitIndex / 32);
         const bitOffset = bitIndex % 32;
-        
-        if ((popularDomainsFilter.data[arrayIndex] & (1 << bitOffset)) === 0) {
+
+        if ((popularDomainsFilter.data[arrayIndex] & (1 << bitOffset)) === 0) { 
             return false;
         }
     }
@@ -59,6 +49,14 @@ function checkPopularity(hostname) {
   } catch(e) {
     return false;
   }
+}
+
+function getRootDomain(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length > 2) {
+    return parts.slice(-2).join('.');
+  }
+  return hostname;
 }
 
 /**
@@ -70,7 +68,17 @@ function extractFeatures(url, domainAgeDays = 30) {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname;
     
-    const isPopular = checkPopularity(hostname) ? 1.0 : 0.0;
+    const hostnameLower = hostname.toLowerCase();
+    const rootDomain = getRootDomain(hostname);
+
+    const isPopular = checkPopularity(rootDomain) ? 1.0 : 0.0;
+
+    let infraRiskScore = 0.0;
+    if (hostnameLower.endsWith('.tk') || hostnameLower.endsWith('.ml') || hostnameLower.includes('10minutemail') || hostnameLower.includes('tempmail')) {
+      infraRiskScore = 1.0;
+    } else if (hostnameLower.includes('herokuapp.com') || hostnameLower.includes('vercel.app') || hostnameLower.includes('firebaseapp.com') || hostnameLower.includes('web.app')) {
+      infraRiskScore = 0.7;
+    }
 
     return [
       parseFloat(url.length),                                  // 1. url_length
@@ -80,11 +88,12 @@ function extractFeatures(url, domainAgeDays = 30) {
       parseFloat(url.replace(/[^0-9]/g, "").length / url.length),// 5. digit_ratio        
       parseFloat((url.match(/[!@#$%^&*(),.?":{}|<>]/g) || []).length), // 6. special_char_count
       parseFloat(domainAgeDays),                               // 7. domain_age_days
-      isPopular                                                // 8. is_popular_domain
+      isPopular,                                               // 8. is_popular_domain
+      infraRiskScore                                           // 9. infra_risk_score
     ];
   } catch (error) {
     // Fallback if URL is totally invalid
-    return [url.length, url.split('.').length - 1, 0, 0, 0, 0, domainAgeDays, 0.0];  
+    return [url.length, url.split('.').length - 1, 0, 0, 0, 0, domainAgeDays, 0.0, 0.0];  
   }
 }
 
@@ -102,14 +111,14 @@ async function runSentryCheck(url, domainAge) {
     // 2. Get the numbers
     // Ensure feature array length is exactly 8
     const featureArray = extractFeatures(url, domainAge);
-    if (featureArray.length !== 8) {
+    if (featureArray.length !== 9) {
         console.error("Feature length mismatch!");
     }
 
     // 3. Convert to ONNX Tensor
-    // Ensure Tensor is created as [1, 8]
+    // Ensure Tensor is created as [1, 9]
     const floatData = Float32Array.from(featureArray);
-    const tensor = new ort.Tensor('float32', floatData, [1, 8]);
+    const tensor = new ort.Tensor('float32', floatData, [1, 9]);
     // 4. Predict
     // The input name must match the one from `initial_types` during Python training
     const outputs = await cachedSession.run({ float_input: tensor });
@@ -206,4 +215,7 @@ async function localProber(email) {
 }
 
 module.exports = { localProber };
+
+
+
 
