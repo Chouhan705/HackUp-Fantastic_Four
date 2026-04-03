@@ -9,11 +9,18 @@
 
 <div class="view active" id="v-auth">
     <div class="logo-box">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="1.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+        </svg>
     </div>
     <div class="pg-title">PhishGuard.AI</div>
     <div class="pg-sub">THREAT INTELLIGENCE ENGINE</div>
-    <div class="divider"><div class="divider-line"></div><span class="divider-txt">SECURE AUTH</span><div class="divider-line"></div></div>
+    <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-txt">SECURE AUTH</span>
+        <div class="divider-line"></div>
+    </div>
     <button class="signin-btn" id="signInBtn">Sign in with Google</button>
     <div class="err-msg" id="authErr"></div>
 </div>
@@ -21,28 +28,36 @@
 <div class="view" id="v-dash">
     <div class="dash-header">
         <div class="dash-logo">🛡️ PhishGuard.AI</div>
-        <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+        <div class="live-status">
+            <span class="status-dot"></span> LIVE
+        </div>
     </div>
-    <button class="eval-btn" id="startScanBtn">
-        <div class="icon-ring">🔍</div>
-        <div class="eval-label">EVALUATE INBOX</div>
-        <div class="eval-sub">Scans 5 latest emails · ~3s</div>
-    </button>
-    <div class="status-bar"><span id="statusTxt">⬤ Connected to Gmail</span></div>
+    <div class="hero-box">
+        <div class="hero-label">SYSTEM READY</div>
+        <div class="hero-val">0 THREATS</div>
+        <div class="hero-desc">Secure session established. Initialize DNA scan to analyze your inbox.</div>
+    </div>
+    <button class="action-btn" id="startScanBtn">INITIALIZE FORENSIC SCAN</button>
 </div>
 
 <div class="view" id="v-loading">
-    <div class="dna-icon">🧬</div>
-    <div class="analyzing" id="dnaText">ANALYZING DNA...</div>
-    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="loading-wrap">
+        <div class="dna-spinner"></div>
+        <div class="loading-txt" id="dnaText">ANALYZING DNA...</div>
+        <div class="progress-track">
+            <div class="progress-fill" id="progFill"></div>
+        </div>
+        <div class="status-sub" id="statusTxt">Accessing Gmail via OAuth 2.0...</div>
+    </div>
 </div>
 
 <div class="view" id="v-list">
     <div class="list-header">
         <button class="back-btn" id="backToDash">← BACK</button>
-        <div class="list-title">INBOX SCAN RESULTS</div>
+        <div class="list-title">SCAN RESULTS</div>
     </div>
-    <div class="email-list" id="emailList"></div>
+    <div class="scroll-area" id="emailList">
+        </div>
 </div>
 
 <div class="view" id="v-report">
@@ -51,28 +66,38 @@
         <div class="report-title">THREAT REPORT</div>
     </div>
 
-    <svg viewBox="0 0 200 110" width="200" height="110" style="margin: 0 auto; display: block;">
-        <defs>
-            <filter id="gl"><feGaussianBlur stdDeviation="2"/></filter>
-            <linearGradient id="ag"><stop offset="0%" id="g1"/><stop offset="100%" id="g2"/></linearGradient>
-        </defs>
-        <path d="M 28 95 A 72 72 0 0 1 172 95" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round"/>
-        <path id="gaugeArc" d="M 28 95 A 72 72 0 0 1 28 95" fill="none" stroke="url(#ag)" stroke-width="10" stroke-linecap="round" filter="url(#gl)"/>
-        <circle id="gaugeDot" cx="28" cy="95" r="5"/>
-        <text id="gaugeScore" x="100" y="84" text-anchor="middle" font-size="28" font-weight="800">0%</text>
-    </svg>
-
-    <div style="text-align:center;"><div class="risk-badge" id="riskBadge">—</div></div>
-
-    <div class="alert-card" id="alertCard">
-        <div class="alert-head" id="alertHead"></div>
-        <div class="findings-list" id="findingsList"></div>
+    <div class="gauge-container">
+        <svg viewBox="0 0 200 110" width="200" height="110">
+            <defs>
+                <filter id="gl"><feGaussianBlur stdDeviation="2"/></filter>
+                <linearGradient id="ag">
+                    <stop offset="0%" id="g1" stop-color="#30d158"/>
+                    <stop offset="100%" id="g2" stop-color="#30d158"/>
+                </linearGradient>
+            </defs>
+            <path d="M 28 95 A 72 72 0 0 1 172 95" fill="none" stroke="#1e293b" stroke-width="10" stroke-linecap="round"/>
+            <path id="gaugeArc" d="M 28 95 A 72 72 0 0 1 28 95" fill="none" stroke="url(#ag)" stroke-width="10" stroke-linecap="round" filter="url(#gl)"/>
+            <circle id="gaugeDot" cx="28" cy="95" r="5" fill="#30d158"/>
+            <text id="gaugeScore" x="100" y="84" text-anchor="middle" font-size="28" font-weight="800" fill="#e2e8f0">0%</text>
+        </svg>
     </div>
 
-    <div class="meta-row"><span class="meta-key">FROM</span><span class="meta-val" id="rFrom"></span></div>
-    <div class="meta-row"><span class="meta-key">SUBJ</span><span class="meta-val" id="rSubj"></span></div>
+    <div style="text-align:center;">
+        <div class="risk-badge" id="riskBadge">—</div>
+    </div>
 
-    <button class="full-btn" id="fullBtn">🔍 FULL FORENSIC REPORT</button>
+    <div class="alert-card" id="alertCard">
+        <div class="alert-head" id="alertHead">ANALYSIS SUMMARY</div>
+        <div class="findings-list" id="findingsList">
+            </div>
+    </div>
+
+    <div class="meta-strip">
+        <div class="meta-row"><span>FROM:</span> <span id="rFrom">...</span></div>
+        <div class="meta-row"><span>SUBJ:</span> <span id="rSubj">...</span></div>
+    </div>
+
+    <button class="full-report-btn" id="fullBtn">OPEN FULL FORENSIC REPORT</button>
 </div>
 
 <script src="popup.js"></script>

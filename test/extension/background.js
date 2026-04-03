@@ -1,89 +1,72 @@
-// background.js — PhishGuard.AI Service Worker (Manifest V3)
- 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
+/**
+ * ─── LIFECYCLE MANAGEMENT ───
+ */
 chrome.runtime.onInstalled.addListener(({ reason }) => {
-  if (reason === "install") {
-    console.log("[PhishGuard.AI] Extension installed.");
-    chrome.storage.local.set({ authToken: null, lastScan: null });
-  }
+    if (reason === "install") {
+        console.log("🛡️ [PhishGuard.AI] Extension Installed. Initializing secure storage...");
+        chrome.storage.local.set({ 
+            scanHistory: [], 
+            authToken: null 
+        });
+    }
 });
- 
-// ─── Message router ───────────────────────────────────────────────────────────
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "ANALYZE_EMAIL") {
-    analyzeEmail(message.payload).then(sendResponse);
-    return true; // async response
-  }
- 
-  if (message.type === "GET_AUTH_TOKEN") {
-    chrome.identity.getAuthToken({ interactive: true }, (token) => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ error: chrome.runtime.lastError.message });
-      } else {
-        chrome.storage.local.set({ authToken: token });
-        sendResponse({ token });
-      }
-    });
-    return true;
-  }
-});
- 
-// ─── Mock AI email analysis (replace with real API call) ──────────────────────
-async function analyzeEmail(emailPayload) {
-  // In production: call your AI backend or Google's Safe Browsing API here
-  // Example:
-  //   const res = await fetch("https://your-api.com/analyze", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify(emailPayload),
-  //   });
-  //   return res.json();
- 
-  return {
-    score: 88,
-    summary: "Suspicious Link Detected",
-    detail: "The link leads to 'paypa1.com' instead of 'paypal.com'. Classic homograph phishing.",
-    sender: "support@paypa1.com",
-    subject: "Urgent: Verify Your Account",
-  };
-}
- // Create an alarm every 1 minute to keep the worker "hot"
+
+/**
+ * ─── PERSISTENCE (HEARTBEAT) ───
+ * MV3 Service Workers shut down after 30s of inactivity. 
+ * We use an alarm to "nudge" the worker every minute to stay active for live monitoring.
+ */
 chrome.alarms.create('keepAlive', { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'keepAlive') {
-    console.log('[PhishGuard.AI] Heartbeat: Worker is active.');
-  }
-});// background.js
-
-chrome.runtime.onStartup.addListener(() => {
-    chrome.identity.getAuthToken({ interactive: false }, (token) => {
-        if (chrome.runtime.lastError || !token) {
-            console.log("[PhishGuard.AI] No active session found on startup.");
-        } else {
-            console.log("[PhishGuard.AI] Session validated silently.");
-        }
-    });
+    if (alarm.name === 'keepAlive') {
+        console.log('💓 [PhishGuard.AI] Heartbeat: Service Worker is active.');
+    }
 });
-// background.js
+
+/**
+ * ─── SILENT AUTHENTICATION ───
+ * Attempts to restore the user's session whenever Chrome starts up.
+ */
+chrome.runtime.onStartup.addListener(async () => {
+    console.log("🚀 [PhishGuard.AI] Browser started. Restoring session...");
+    const token = await getAuthTokenSilent();
+    if (token) {
+        chrome.storage.local.set({ authToken: token });
+    }
+});
+
 function getAuthTokenSilent() {
-  return new Promise((resolve) => {
-    chrome.identity.getAuthToken({ interactive: false }, (token) => {
-      if (chrome.runtime.lastError || !token) {
-        console.log("[PhishGuard.AI] No cached session found.");
-        resolve(null);
-      } else {
-        console.log("[PhishGuard.AI] Session restored.");
-        resolve(token);
-      }
+    return new Promise((resolve) => {
+        chrome.identity.getAuthToken({ interactive: false }, (token) => {
+            if (chrome.runtime.lastError || !token) {
+                console.log("⚠️ [Auth] No cached session found.");
+                resolve(null);
+            } else {
+                console.log("✅ [Auth] Session restored successfully.");
+                resolve(token);
+            }
+        });
     });
-  });
 }
 
-// Check on startup
-chrome.runtime.onStartup.addListener(async () => {
-  const token = await getAuthTokenSilent();
-  if (token) {
-    chrome.storage.local.set({ authToken: token });
-  }
+/**
+ * ─── MESSAGE ROUTING ───
+ * Bridges communication between the Content Script (Gmail) and the Extension UI.
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Forward Gmail email-open events to the Popup or Side Panel
+    if (message.type === "EMAIL_OPENED") {
+        console.log("📨 [Background] Relaying target email ID:", message.emailId);
+        // We broadcast this so if the Side Panel is open, it can react immediately
+        chrome.runtime.sendMessage(message);
+    }
+
+    // Handle manual auth requests if needed
+    if (message.type === "GET_TOKEN_INTERACTIVE") {
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+            sendResponse({ token: token || null });
+        });
+        return true; // Keep channel open for async response
+    }
 });

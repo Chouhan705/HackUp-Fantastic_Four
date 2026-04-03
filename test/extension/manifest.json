@@ -4,13 +4,13 @@
   "version": "1.0.0",
   "description": "AI-powered phishing detection for Gmail.",
   "permissions": [
-  "tabs",
-  "storage",
-  "activeTab",
-  "identity",
-  "alarms",
-  "sidePanel"
-],
+    "tabs",
+    "storage",
+    "activeTab",
+    "identity",
+    "alarms",
+    "sidePanel"
+  ],
   "host_permissions": [
     "https://mail.google.com/*",
     "http://localhost:3000/*"
@@ -27,9 +27,22 @@
   "action": {
     "default_popup": "popup.html"
   },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": [

@@ -1,31 +1,48 @@
-// acquisition.js
+/**
+ * 📥 PhishGuard.AI — Data Acquisition Layer
+ * Role: Interfaces with the Gmail API to retrieve email DNA for forensic analysis.
+ */
 const { google } = require('googleapis');
 
+/**
+ * Initializes the Gmail API service using the OAuth2 access token from the extension.
+ */
 function getGmailService(accessToken) {
   const auth = new google.auth.OAuth2();
   auth.setCredentials({ access_token: accessToken });
   return google.gmail({ version: 'v1', auth });
 }
 
-// Recursively drills into MIME payload to find HTML body
+/**
+ * RECURSIVE MIME PARSER
+ * Forensic emails often have multiple layers (Multipart/Alternative, Multipart/Related).
+ * This function drills down to find the actual HTML or Plain Text content.
+ */
 function getBody(payload) {
   if (payload.parts) {
     for (const part of payload.parts) {
       const mime = part.mimeType || '';
+      
+      // Priority 1: HTML Body
       if (mime === 'text/html' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
+      
+      // Priority 2: Recurse into nested parts
       if (part.parts) {
         const deep = getBody(part);
         if (deep) return deep;
       }
     }
+    
+    // Fallback: Plain Text if HTML is missing
     for (const part of payload.parts) {
       if (part.mimeType === 'text/plain' && part.body?.data) {
         return Buffer.from(part.body.data, 'base64').toString('utf-8');
       }
     }
   } else {
+    // Handling for simple, single-part emails
     if (payload.mimeType === 'text/html' && payload.body?.data) {
       return Buffer.from(payload.body.data, 'base64').toString('utf-8');
     }
@@ -34,11 +51,14 @@ function getBody(payload) {
 }
 
 /**
- * Fetches the latest emails but SKIPS those already in existingIds
+ * FETCH LATEST EMAILS (Batch Mode)
+ * Implements Deduplication: Skips IDs that the extension has already validated.
  */
 async function fetchLatestEmails(accessToken, maxResults = 5, existingIds = []) {
   const service = getGmailService(accessToken);
-  const idSet = new Set(existingIds); // Use a Set for O(1) lookup speed
+  const idSet = new Set(existingIds); // O(1) lookup for high-speed filtering
+
+  console.log(`📡 [Acquisition] Requesting list (Limit: ${maxResults})...`);
 
   const listRes = await service.users.messages.list({
     userId: 'me',
@@ -49,12 +69,14 @@ async function fetchLatestEmails(accessToken, maxResults = 5, existingIds = []) 
   const emailData = [];
 
   for (const msg of messages) {
-    // RESOURCE CHECK: Skip if already scanned to save API quota and time
+    // 🛡️ DEDUPLICATION CHECK: Skip redundant processing
     if (idSet.has(msg.id)) {
-      console.log(`[Acquisition] Skipping duplicate ID: ${msg.id}`);
+      console.log(`⏩ [Acquisition] Skipping known ID: ${msg.id}`);
       continue;
     }
 
+    console.log(`📥 [Acquisition] Fetching full DNA for ID: ${msg.id}`);
+    
     const full = await service.users.messages.get({
       userId: 'me',
       id: msg.id,
@@ -64,11 +86,14 @@ async function fetchLatestEmails(accessToken, maxResults = 5, existingIds = []) 
     const payload = full.data.payload || {};
     const headers = payload.headers || [];
 
+    // Metadata extraction for UI mapping
     const subject = headers.find(h => h.name.toLowerCase() === 'subject')?.value || 'No Subject';
     const sender  = headers.find(h => h.name.toLowerCase() === 'from')?.value  || 'Unknown';
     const date    = headers.find(h => h.name.toLowerCase() === 'date')?.value  || '';
 
     const htmlBody = getBody(payload);
+    
+    // Combine all headers into a single block for the DNA Detective agent
     const rawHeadersText = headers.map(h => `${h.name}: ${h.value}`).join('\n');
 
     emailData.push({
@@ -86,10 +111,13 @@ async function fetchLatestEmails(accessToken, maxResults = 5, existingIds = []) 
 }
 
 /**
- * Fetches a specific email by ID (for the "Auto-Scan" feature)
+ * FETCH SINGLE EMAIL (Auto-Scan Mode)
+ * Triggered by the extension when a user clicks a specific email in Gmail.
  */
 async function fetchSingleEmail(accessToken, emailId) {
   const service = getGmailService(accessToken);
+  
+  console.log(`🎯 [Acquisition] Targeted fetch for ID: ${emailId}`);
 
   const full = await service.users.messages.get({
     userId: 'me',

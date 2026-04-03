@@ -1,3 +1,4 @@
+/* ── PhishGuard.AI Dashboard Styling ── */
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@400;600;700;800&display=swap');
 
 :root {
@@ -32,57 +33,84 @@ body {
   overflow-x: hidden;
 }
 
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background-image: linear-gradient(rgba(255,77,77,.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,77,77,.02) 1px, transparent 1px);
-  background-size: 28px 28px; pointer-events: none;
-}
-
+/* ── UI Shell ── */
 .pg-shell { display: flex; min-height: 100vh; position: relative; z-index: 1; }
 
 .sidebar {
-  width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; padding: 20px 0; position: fixed; top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
 }
 
 .sidebar-brand {
-  display: flex; align-items: center; gap: 8px; padding: 0 18px 20px;
-  border-bottom: 1px solid var(--border); font-family: var(--mono); font-weight: 700; color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--text);
 }
 
 .nav-item {
-  display: flex; align-items: center; gap: 10px; padding: 12px 18px; color: var(--muted);
-  text-decoration: none; font-size: 13px; font-weight: 600; transition: .2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: .2s;
 }
 
-.nav-item:hover, .nav-item.active { color: var(--red); background: var(--red-bg); }
+.nav-item:hover, .nav-item.active {
+  color: var(--red);
+  background: var(--red-bg);
+}
 
 .main { margin-left: var(--sidebar-w); flex: 1; padding: 30px; }
 
+/* ── Content Layout ── */
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
 .page-title { font-family: var(--mono); font-size: 24px; letter-spacing: 1px; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
 .stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 12px; display: flex; gap: 15px; }
 .stat-value { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+.stat-value.red { color: var(--red); }
+.stat-value.green { color: var(--green); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.card-title { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.card-title { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; }
 
 .charts-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; }
 
+/* ── Analytics Controls ── */
+.chart-controls { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; }
+.pill { padding: 4px 12px; border-radius: 100px; font-size: 10px; font-weight: 800; cursor: pointer; border: none; }
+.pill.yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+
+.vector-toggles-row { display: flex; gap: 12px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+/* ── Tables & Lists ── */
 .activity-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .activity-table th { text-align: left; padding: 10px; color: var(--dim); border-bottom: 1px solid var(--border); }
 .activity-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+.activity-table tr:hover { background: rgba(255,255,255,0.02); }
 
-.pill { padding: 3px 10px; border-radius: 100px; font-size: 10px; font-weight: 800; }
-.pill.red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
-.pill.yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
-.pill.green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.red { color: var(--red); }
+.yellow { color: var(--yellow); }
+.green { color: var(--green); }
 
 .section { display: none; }
 .section.active { display: block; }
 
-.ai-insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-.ai-card-body { font-size: 13px; line-height: 1.5; color: var(--muted); }
+#map { height: 450px; background: var(--surface2); }
