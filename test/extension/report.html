@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PhishGuard — Full Report</title>
+  <link rel="stylesheet" href="report.css">
+</head>
+<body>
+ 
+<div class="report-shell">
+ 
+  <!-- TOP BAR -->
+  <div class="report-topbar">
+    <a href="dashboard.html" class="back-link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Dashboard
+    </a>
+    <div class="report-brand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      PHISHGUARD — THREAT REPORT
+    </div>
+    <div id="riskBadgeFull" class="risk-badge-top">—</div>
+  </div>
+ 
+  <div class="report-body">
+ 
+    <!-- LEFT COLUMN -->
+    <div class="report-left">
+ 
+      <!-- HERO SCORE -->
+      <div class="score-hero card">
+        <div class="score-ring-wrap">
+          <svg viewBox="0 0 140 140" width="140" height="140">
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            <!-- Track -->
+            <circle cx="70" cy="70" r="54" fill="none" stroke="#1a2540" stroke-width="8"/>
+            <!-- Arc -->
+            <circle id="scoreArc" cx="70" cy="70" r="54" fill="none"
+              stroke="#ff4d4d" stroke-width="8"
+              stroke-linecap="round"
+              stroke-dasharray="339.3" stroke-dashoffset="339.3"
+              transform="rotate(-90 70 70)"
+              filter="url(#glow)"
+              style="transition: stroke-dashoffset 1.2s cubic-bezier(.17,.67,.35,1)"/>
+          </svg>
+          <div class="score-center">
+            <div class="score-number" id="scoreNum">0%</div>
+            <div class="score-label">PHISH RISK</div>
+          </div>
+        </div>
+ 
+        <div class="score-meta">
+          <div class="meta-item">
+            <div class="meta-label">CONFIDENCE</div>
+            <div class="meta-val" id="metaConf">—</div>
+          </div>
+          <div class="meta-divider"></div>
+          <div class="meta-item">
+            <div class="meta-label">SCAN TIME</div>
+            <div class="meta-val">0.42s</div>
+          </div>
+          <div class="meta-divider"></div>
+          <div class="meta-item">
+            <div class="meta-label">THREAT TYPE</div>
+            <div class="meta-val" id="metaType">—</div>
+          </div>
+        </div>
+      </div>
+ 
+      <!-- FROM / SUBJECT -->
+      <div class="card">
+        <div class="card-title">Email Metadata</div>
+        <div class="meta-row"><span class="meta-key">FROM</span><span class="meta-val-txt" id="rFrom">—</span></div>
+        <div class="meta-row"><span class="meta-key">SUBJ</span><span class="meta-val-txt" id="rSubj">—</span></div>
+      </div>
+ 
+      <!-- ACTIONS -->
+      <div class="card">
+        <div class="card-title">Recommended Actions</div>
+        <div class="action-item green">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Do not click any links
+        </div>
+        <div class="action-item green">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Verify sender via another channel
+        </div>
+        <div class="action-item red">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Do not reply or forward
+        </div>
+        <div class="action-item red">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Do not enter any credentials
+        </div>
+      </div>
+ 
+    </div>
+ 
+    <!-- RIGHT COLUMN -->
+    <div class="report-right">
+ 
+      <!-- DETECTED PATTERNS -->
+      <div class="card">
+        <div class="card-title">Detected Patterns</div>
+        <div class="findings-wrap" id="findingsList"></div>
+      </div>
+ 
+      <!-- URL ANALYSIS -->
+      <div class="card">
+        <div class="card-title">URL Analysis</div>
+        <div class="url-item red">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span class="url-val red">http://g00gle-security.xyz</span>
+          <span class="url-tag red">MALICIOUS</span>
+        </div>
+        <div class="url-item yellow">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          <span class="url-val yellow">bit.ly/3xK9mPq</span>
+          <span class="url-tag yellow">SUSPICIOUS</span>
+        </div>
+      </div>
+ 
+      <!-- AI REASONING -->
+      <div class="card">
+        <div class="card-title">AI Reasoning</div>
+        <div class="reasoning-list">
+          <div class="reasoning-item">
+            <div class="r-dot red"></div>
+            <div class="r-text">Urgency language detected — "Your account will be suspended"</div>
+          </div>
+          <div class="reasoning-item">
+            <div class="r-dot red"></div>
+            <div class="r-text">Suspicious domain using typosquatting (g00gle vs google)</div>
+          </div>
+          <div class="reasoning-item">
+            <div class="r-dot red"></div>
+            <div class="r-text">Sender domain does not match claimed organization</div>
+          </div>
+          <div class="reasoning-item">
+            <div class="r-dot yellow"></div>
+            <div class="r-text">Shortened URL conceals final destination</div>
+          </div>
+          <div class="reasoning-item">
+            <div class="r-dot yellow"></div>
+            <div class="r-text">HTML/text ratio inconsistent with legitimate corporate email</div>
+          </div>
+        </div>
+      </div>
+ 
+    </div>
+  </div>
+</div>
+ 
+<script src="report.js"></script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PhishGuard — Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+</head>
+<body>
+ 
+<div class="pg-shell">
+ 
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d4d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      <span>PHISHGUARD</span>
+    </div>
+ 
+    <nav class="sidebar-nav">
+      <a class="nav-item active" data-section="overview" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Overview
+      </a>
+      <a class="nav-item" data-section="analytics" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Analytics
+      </a>
+      <a class="nav-item" data-section="geo" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Geo Threats
+      </a>
+      <a class="nav-item" data-section="activity" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Activity
+      </a>
+      <a class="nav-item" data-section="ai" href="#">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        AI Insights
+      </a>
+    </nav>
+ 
+    <div class="sidebar-footer">
+      <div class="live-badge">
+        <span class="live-dot"></span>
+        LIVE MONITORING
+      </div>
+    </div>
+  </aside>
+ 
+  <!-- MAIN -->
+  <main class="main">
+ 
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Overview</h1>
+        <span class="page-sub">Real-time threat intelligence</span>
+      </div>
+      <div class="topbar-right">
+        <div class="threat-level-badge danger">
+          <span class="tl-dot"></span>
+          ELEVATED THREAT LEVEL
+        </div>
+      </div>
+    </div>
+ 
+    <!-- SECTION: OVERVIEW -->
+    <section class="section active" id="section-overview">
+ 
+      <!-- STAT CARDS -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon scan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Emails Scanned</div>
+            <div class="stat-value">1,284</div>
+            <div class="stat-delta green">▲ +12% this week</div>
+          </div>
+        </div>
+ 
+        <div class="stat-card">
+          <div class="stat-icon phish">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Phishing Detected</div>
+            <div class="stat-value red">47</div>
+            <div class="stat-delta red">▲ +8 today</div>
+          </div>
+        </div>
+ 
+        <div class="stat-card">
+          <div class="stat-icon safe">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Safe Emails</div>
+            <div class="stat-value green">1,198</div>
+            <div class="stat-delta muted">93.3% clean rate</div>
+          </div>
+        </div>
+ 
+        <div class="stat-card">
+          <div class="stat-icon threat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Threat Level</div>
+            <div class="stat-value red">Elevated</div>
+            <div class="stat-delta green">● Active</div>
+          </div>
+        </div>
+      </div>
+ 
+      <!-- CHARTS -->
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Phishing Attempts Over Time</span>
+            <span class="card-tag">7 days</span>
+          </div>
+          <canvas id="lineChart" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Attack Types</span>
+            <span class="card-tag">All time</span>
+          </div>
+          <canvas id="barChart" height="160"></canvas>
+        </div>
+      </div>
+ 
+      <!-- BOTTOM LISTS -->
+      <div class="bottom-grid">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Geo Threat Origins</span>
+          </div>
+          <ul class="threat-list">
+            <li><span class="tl-region">Eastern Europe</span><span class="pill red">Phishing</span></li>
+            <li><span class="tl-region">Southeast Asia</span><span class="pill yellow">Suspicious</span></li>
+            <li><span class="tl-region">West Africa</span><span class="pill red">Phishing</span></li>
+            <li><span class="tl-region">South America</span><span class="pill green">Safe</span></li>
+          </ul>
+        </div>
+ 
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Recent Activity</span>
+          </div>
+          <ul class="threat-list">
+            <li><span class="tl-region">Verify PayPal account</span><span class="pill red">Phishing</span></li>
+            <li><span class="tl-region">Meeting notes</span><span class="pill green">Safe</span></li>
+            <li><span class="tl-region">Invoice #4892</span><span class="pill yellow">Suspicious</span></li>
+            <li><span class="tl-region">Delivery update</span><span class="pill red">Phishing</span></li>
+          </ul>
+        </div>
+      </div>
+ 
+    </section>
+ 
+    <!-- SECTION: ANALYTICS -->
+    <section class="section" id="section-analytics">
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-head"><span class="card-title">Weekly Phishing Trend</span></div>
+          <canvas id="lineChart2" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-head"><span class="card-title">Risk Distribution</span></div>
+          <canvas id="doughnutChart" height="160"></canvas>
+        </div>
+      </div>
+      <div class="card" style="margin-top:0">
+        <div class="card-head"><span class="card-title">Attack Vectors</span><span class="card-tag">Monthly</span></div>
+        <canvas id="barChart2" height="120"></canvas>
+      </div>
+    </section>
+ 
+    <!-- SECTION: GEO -->
+    <section class="section" id="section-geo">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><span class="card-title">🌍 Geo Threat Intelligence</span><span class="card-tag">Live</span></div>
+        <div id="map"></div>
+      </div>
+    </section>
+ 
+    <!-- SECTION: ACTIVITY -->
+    <section class="section" id="section-activity">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Full Activity Log</span><span class="card-tag">Last 24h</span></div>
+        <table class="activity-table">
+          <thead>
+            <tr><th>Time</th><th>Subject</th><th>Sender</th><th>Score</th><th>Status</th></tr>
+          </thead>
+          <tbody id="activityTableBody">
+            <tr><td>14:32</td><td>Verify PayPal account</td><td>noreply@paypa1.xyz</td><td class="red">89%</td><td><span class="pill red">Phishing</span></td></tr>
+            <tr><td>13:11</td><td>Invoice #4892</td><td>billing@company.io</td><td class="yellow">52%</td><td><span class="pill yellow">Suspicious</span></td></tr>
+            <tr><td>12:58</td><td>Meeting notes</td><td>alice@work.com</td><td class="green">4%</td><td><span class="pill green">Safe</span></td></tr>
+            <tr><td>11:20</td><td>Delivery update</td><td>track@fedx-delivery.net</td><td class="red">76%</td><td><span class="pill red">Phishing</span></td></tr>
+            <tr><td>10:05</td><td>Project update Q4</td><td>cto@company.com</td><td class="green">2%</td><td><span class="pill green">Safe</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+ 
+    <!-- SECTION: AI -->
+    <section class="section" id="section-ai">
+      <div class="ai-insights-grid">
+        <div class="card ai-card">
+          <div class="ai-card-icon red">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+          </div>
+          <div class="ai-card-title">Credential Harvesting Campaign</div>
+          <div class="ai-card-body">AI detected a coordinated credential harvesting campaign targeting PayPal and banking users. 12 emails share identical DOM fingerprints.</div>
+          <div class="ai-card-tag red">HIGH RISK</div>
+        </div>
+ 
+        <div class="card ai-card">
+          <div class="ai-card-icon yellow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div class="ai-card-title">Sender Spoofing Detected</div>
+          <div class="ai-card-body">Multiple emails are spoofing legitimate domains using Unicode lookalike characters. Pattern matches known BEC toolkit signatures.</div>
+          <div class="ai-card-tag yellow">MODERATE RISK</div>
+        </div>
+ 
+        <div class="card ai-card">
+          <div class="ai-card-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+          <div class="ai-card-title">Model Confidence High</div>
+          <div class="ai-card-body">Detection accuracy is at 97.2% this week. Zero false negatives reported. Model continues to learn from new threat vectors in real time.</div>
+          <div class="ai-card-tag green">SYSTEM HEALTHY</div>
+        </div>
+      </div>
+    </section>
+ 
+  </main>
+</div>
+ 
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

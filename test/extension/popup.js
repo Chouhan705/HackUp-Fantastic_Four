@@ -167,7 +167,7 @@ function animateScore(target) {
 function openReport() {
     if (!currentReport) return;
     chrome.storage.local.set({ lastReport: currentReport }, () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL('full_report.html') });
+        chrome.tabs.create({ url: chrome.runtime.getURL('report.html') });
     });
 }
 
