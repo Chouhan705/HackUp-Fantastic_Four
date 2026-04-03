@@ -31,7 +31,8 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "report.html"
+        "report.html",
+        "dashboard.html"
       ],
       "matches": [
         "<all_urls>"

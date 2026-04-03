@@ -44,8 +44,10 @@ function initNavigation() {
 }
 
 // ================= WIDGET LOGIC =================
+// Updates stats based on ACTUAL data from Gemini reports
 function updateStats() {
     const total = scanHistory.length;
+    // Filters based on the Judge Agent's final_risk_score
     const phish = scanHistory.filter(s => s.final_risk_score >= 70).length;
     const safe = scanHistory.filter(s => s.final_risk_score < 40).length;
     const rate = total > 0 ? ((safe / total) * 100).toFixed(1) : 100;
@@ -54,32 +56,38 @@ function updateStats() {
     document.getElementById('statPhish').textContent = phish;
     document.getElementById('statSafe').textContent = safe;
     document.getElementById('statRate').textContent = rate + '%';
-
-    const badge = document.getElementById('globalThreatBadge');
-    if (phish > 0) {
-        badge.className = 'threat-level-badge danger';
-        document.getElementById('globalThreatText').textContent = 'ELEVATED THREAT';
-    }
 }
 
+// Makes the activity log interactive
 function updateActivityTable() {
     const tbody = document.getElementById('activityTableBody');
     tbody.innerHTML = '';
-    scanHistory.slice(-10).reverse().forEach(entry => {
+
+    scanHistory.slice().reverse().forEach(entry => {
         const score = entry.final_risk_score || 0;
         const status = score >= 70 ? 'red' : score >= 40 ? 'yellow' : 'green';
-        const row = `
-            <tr>
-                <td>${entry.date || 'Today'}</td>
-                <td>${entry.subject}</td>
-                <td>${entry.sender.split('<')[0]}</td>
-                <td class="${status}">${score}%</td>
-                <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
-            </tr>
+        
+        const row = document.createElement('tr');
+        row.style.cursor = 'pointer'; // Visual cue for interactivity
+        row.innerHTML = `
+            <td>${entry.date || 'Today'}</td>
+            <td>${entry.subject}</td>
+            <td>${entry.sender.split('<')[0]}</td>
+            <td class="${status}">${score}%</td>
+            <td><span class="pill ${status}">${status.toUpperCase()}</span></td>
         `;
-        tbody.insertAdjacentHTML('beforeend', row);
+
+        // CLICK HANDLER: Redirects to the deep-dive report for THIS specific email
+        row.addEventListener('click', () => {
+            chrome.storage.local.set({ lastReport: entry }, () => {
+                window.location.href = 'report.html';
+            });
+        });
+
+        tbody.appendChild(row);
     });
 }
+
 
 function updateAiInsights() {
     const container = document.getElementById('aiInsightsGrid');
@@ -145,4 +153,87 @@ function initMap() {
     if (map) return;
     map = L.map('map').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+}
+let vectorChart = null;
+let currentChartType = 'bar'; // Default
+
+function initVectorChart() {
+    const ctx = document.getElementById('vectorChart').getContext('2d');
+    
+    const datasets = [
+        {
+            label: 'DNA (Auth)',
+            data: scanHistory.map(s => s.dna_evidence?.auth_score || 0), //
+            backgroundColor: '#ff4d4d',
+            borderColor: '#ff4d4d',
+            hidden: false
+        },
+        {
+            label: 'Links (Typosquat)',
+            data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0), //
+            backgroundColor: '#ffd60a',
+            borderColor: '#ffd60a',
+            hidden: false
+        },
+        {
+            label: 'Profiling (Social Eng)',
+            data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0), //
+            backgroundColor: '#30d158',
+            borderColor: '#30d158',
+            hidden: false
+        }
+    ];
+
+    vectorChart = new Chart(ctx, {
+        type: currentChartType,
+        data: {
+            labels: scanHistory.map((_, i) => `Scan ${i+1}`),
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { stacked: currentChartType === 'bar' },
+                y: { 
+                    stacked: currentChartType === 'bar',
+                    beginAtZero: true,
+                    max: currentChartType === 'bar' ? undefined : 100 
+                }
+            },
+            plugins: {
+                legend: { display: false } // We use custom toggles instead
+            }
+        }
+    });
+
+    setupChartListeners();
+}
+
+function setupChartListeners() {
+    // 1. Chart Type Switcher
+    document.getElementById('toggleChartType').addEventListener('click', (e) => {
+        currentChartType = currentChartType === 'bar' ? 'line' : 'bar';
+        e.target.textContent = `Switch to ${currentChartType === 'bar' ? 'Line Graph' : 'Bar Chart'}`;
+        
+        vectorChart.destroy();
+        initVectorChart();
+    });
+
+    // 2. Vector Toggles with "At Least One" Rule
+    const checkboxes = document.querySelectorAll('.vector-toggle input');
+    checkboxes.forEach((cb, index) => {
+        cb.addEventListener('change', () => {
+            const checkedCount = Array.from(checkboxes).filter(c => c.checked).length;
+            
+            if (checkedCount === 0) {
+                cb.checked = true; // Force at least one selection
+                alert("At least one forensic vector must remain active for analysis.");
+                return;
+            }
+
+            // Toggle visibility in Chart.js
+            vectorChart.setDatasetVisibility(index, cb.checked);
+            vectorChart.update();
+        });
+    });
 }

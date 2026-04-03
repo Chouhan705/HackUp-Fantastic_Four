@@ -44,17 +44,14 @@ async function startAnalysis() {
     goTo('v-loading');
     const fill = document.getElementById('progFill');
     fill.style.width = '0%';
-    
-    // UI Progress Bar Animation
     setTimeout(() => fill.style.width = '90%', 50);
 
-    let dots = 0;
-    const dotTimer = setInterval(() => {
-        dots = (dots + 1) % 4;
-        document.getElementById('dnaText').textContent = 'ANALYZING DNA' + '.'.repeat(dots);
-    }, 350);
-
     try {
+        // 1. Get existing history to identify duplicates
+        const { scanHistory = [] } = await chrome.storage.local.get(['scanHistory']);
+        const existingIds = new Set(scanHistory.map(item => item.id));
+
+        // 2. Request analysis from backend
         const res = await fetch(`${BACKEND}/fetch-and-analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -62,30 +59,26 @@ async function startAnalysis() {
         });
         
         const data = await res.json();
-        clearInterval(dotTimer);
-        fill.style.width = '100%';
-
         if (!data.success) throw new Error(data.error || 'Unknown error');
 
-        // LOGGING LOGIC: Save results to scanHistory for Dashboard widgets
-        chrome.storage.local.get(['scanHistory'], (result) => {
-            const history = result.scanHistory || [];
-            // Append new forensic results to history array
-            const updatedHistory = [...history, ...data.results]; 
-            chrome.storage.local.set({ 
+        // 3. Deduplication: Only add results that aren't already in history
+        const newResults = data.results.filter(r => !existingIds.has(r.id));
+        
+        if (newResults.length > 0) {
+            const updatedHistory = [...scanHistory, ...newResults];
+            await chrome.storage.local.set({ 
                 scanHistory: updatedHistory,
-                lastReport: data.results[0] // Set most recent for quick access
+                lastReport: newResults[0] 
             });
-        });
+        }
 
+        fill.style.width = '100%';
         setTimeout(() => {
-            fill.style.width = '0';
-            renderEmailList(data.results);
+            renderEmailList(data.results); // Show all 5 in the popup for context
             goTo('v-list');
         }, 400);
 
     } catch (err) {
-        clearInterval(dotTimer);
         document.getElementById('statusTxt').textContent = '✕ Error: ' + err.message;
         goTo('v-dash');
     }
