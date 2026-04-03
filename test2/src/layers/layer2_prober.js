@@ -103,6 +103,17 @@ function extractFeatures(url, domainAgeDays = 30) {
  */
 async function runSentryCheck(url, domainAge) {
   try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname;
+      const rootDomain = getRootDomain(hostname);
+
+        const PROFESSIONAL_PLATFORMS = ['eventbrite.com', 'zoom.us', 'microsoft.com', 'huggingface.co', 'notion.com', 'notion.site', 'notion.so', 'ngrok.com', 'ngrok.ai', 'google.com'];
+
+      if (PROFESSIONAL_PLATFORMS.includes(rootDomain)) {
+          console.log(`[Layer 2: The Prober] Short-circuiting ML for trusted platform: ${rootDomain}`);
+          return 0.001; 
+      }
+
     // 1. Load the model (Do this once and cache it for speed)
     if (!cachedSession) {
       cachedSession = await ort.InferenceSession.create(path.join(__dirname, '../../NoPhishZone/phishing_prober.onnx'));

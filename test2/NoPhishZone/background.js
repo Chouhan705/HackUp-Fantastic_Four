@@ -94,6 +94,13 @@ function murmurhash3_32_gc(key, seed) {
   h1 = ((((h1 & 0xffff) * 0xc2b2ae35) + ((((h1 >>> 16) * 0xc2b2ae35) & 0xffff) << 16))) & 0xffffffff;
   h1 ^= h1 >>> 16;
   return h1 >>> 0;
+}
+
+function getRootDomain(hostname) {
+  const parts = hostname.split('.');
+  return parts.length > 2 ? parts.slice(-2).join('.') : hostname;
+}
+
 export async function extractFeatures(url) {
   const urlObj = new URL(url);
   const hostname = urlObj.hostname;
@@ -130,10 +137,43 @@ export async function extractFeatures(url) {
     domain_age_days, 
     is_popular_domain,
     infra_risk_score
+  ];
+  return features;
+}
+
+export async function resolveRedirect(url) {
+  // Only follow redirects for known marketing/tracking wrappers to save performance
+  const trackingWrappers = ['customeriomail.com', 'rs6.net', 'eventbrite.com', 't.co', 'mailchimp', 'mandrillapp.com', 'sendgrid.net', 'hubspotlinks.com', 'hs-analytics.net', 'hubspotemail.net'];
+  try {
+    const hostname = new URL(url).hostname;
+    if (trackingWrappers.some(d => hostname.includes(d))) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      let response = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal });
+      
+      // Handle Bot Shields (e.g. HubSpot interstitial)
+      const contentType = response.headers.get('content-type') || '';
+      if (response.status === 200 && contentType.includes('text/html')) {
+          const html = await response.text();
+          const fallbackMatch = html.match(/href=["']([^"']+)_jss=0["'][^>]*>click here<\/a>/i) || html.match(/url=(https?:\/\/[^"']+)/i);
+          if (fallbackMatch && fallbackMatch[1]) {
+              const innerUrl = fallbackMatch[1].includes('_jss=0') ? fallbackMatch[1] + '_jss=0' : fallbackMatch[1];
+              response = await fetch(innerUrl.replace(/&amp;/g, '&'), { method: 'GET', redirect: 'follow', signal: controller.signal });
+          }
+      }
+      clearTimeout(timeoutId);
+      return response.url || url; // This is the clean link
+    }
+  } catch (e) {
+    return url;
+  }
+  return url;
+}
 
 // Emulating the refined waterfall logic 
 export async function analyzeUrl(url, xgboostScore) {
-  const isPopular = await checkPopularity(url);
+  const finalUrl = await resolveRedirect(url);
+  const isPopular = await checkPopularity(finalUrl);
   
   // Dummy retrieval for Facts in Extension script context.
   const facts = {
@@ -149,6 +189,8 @@ export async function analyzeUrl(url, xgboostScore) {
   if (isOld && isAuth && isClean) {
     return "SAFE_OVERRIDE";
   }
+
+  if (xgboostScore >= 0.8) {
     if (isPopular) {
       // ESCALATE: Don't block, let the AI Judge handle it.
       console.log("[NoPhishZone] Complex URL on Trusted Domain. Escalating to Gemini...");

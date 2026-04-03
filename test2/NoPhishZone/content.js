@@ -12,14 +12,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // Ensure URLs are deduped and max 50 are sent to the AI
         urls = [...new Set(urls)].slice(0, 50);
 
-        // Simulated headers for demonstration
-        // A real extension for Gmail would use Gmail's API to extract the real FROM/TO headers.
         const pageDomain = window.location.hostname;
+
+        // Default headers if we can't scrape them
+        let fromHeader = `unknown_sender@${pageDomain}`;
+        let replyToHeader = `unknown_sender@${pageDomain}`;
         
+        if (pageDomain.includes('mail.google.com')) {
+            // Gmail stores the sender email in a span with class "gD" and attribute "email"
+            // For email threads, get the last "gD" which corresponds to the latest email
+            const senderSpans = document.querySelectorAll('span.gD');
+            if (senderSpans && senderSpans.length > 0) {
+                const latestSender = senderSpans[senderSpans.length - 1];
+                if (latestSender.hasAttribute('email')) {
+                    fromHeader = latestSender.getAttribute('email');
+                    replyToHeader = fromHeader; // Fallback
+                }
+            }
+        }
+
         sendResponse({
             data: {
-                from: `support@${pageDomain}`,
-                replyTo: `support@${pageDomain}`,
+                from: fromHeader,
+                replyTo: replyToHeader,
                 body: bodyText,
                 urls: urls
             }
