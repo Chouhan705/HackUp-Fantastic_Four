@@ -31,7 +31,7 @@ async function analyzeEmail(rawEmail) {
     // LAYER 2: The Prober (XGBoost via ONNX - Local ML)
     // Simulated lightweight local AI logic for structural anomalies
     const proberResult = await localProber(rawEmail);
-    if (proberResult.isSuspicious && proberResult.riskScore > 90) {
+    if (proberResult.isSuspicious && proberResult.riskScore >= 85) {
        console.log(`[Layer 2: The Prober] BLOCKED: ${proberResult.reason}`);
        return formatFinalOutput({ reason: proberResult.reason });
     }

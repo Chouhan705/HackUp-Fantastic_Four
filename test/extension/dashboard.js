@@ -38,7 +38,12 @@ function initNavigation() {
 
             document.getElementById('pageTitle').textContent = item.textContent.trim();
 
-            if (item.dataset.section === 'geo') initMap();
+            const section = item.dataset.section;
+            if (section === 'analytics') {
+                // Re-init or update chart when the section becomes visible
+                setTimeout(() => initVectorChart(), 50); 
+            }
+            if (section === 'geo') initMap();
         });
     });
 }
@@ -161,50 +166,71 @@ let vectorChart = null;
 let currentChartType = 'bar'; // Default
 
 function initVectorChart() {
-    const ctx = document.getElementById('vectorChart').getContext('2d');
+    const canvas = document.getElementById('vectorChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
     
-    const datasets = [
-        {
-            label: 'DNA (Auth)',
-            data: scanHistory.map(s => s.dna_evidence?.auth_score || 0), //
-            backgroundColor: '#ff4d4d',
-            borderColor: '#ff4d4d',
-            hidden: false
-        },
-        {
-            label: 'Links (Typosquat)',
-            data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0), //
-            backgroundColor: '#ffd60a',
-            borderColor: '#ffd60a',
-            hidden: false
-        },
-        {
-            label: 'Profiling (Social Eng)',
-            data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0), //
-            backgroundColor: '#30d158',
-            borderColor: '#30d158',
-            hidden: false
-        }
-    ];
+    // Fallback if no data exists yet
+    if (scanHistory.length === 0) {
+        ctx.font = "14px 'Share Tech Mono'";
+        ctx.fillStyle = "#4a5a7a";
+        ctx.textAlign = "center";
+        ctx.fillText("NO FORENSIC DATA AVAILABLE. RUN A SCAN FIRST.", canvas.width/2, canvas.height/2);
+        return;
+    }
+
+    // Destroy existing instance to prevent "ghost" charts on hover
+    if (vectorChart) vectorChart.destroy();
 
     vectorChart = new Chart(ctx, {
         type: currentChartType,
         data: {
             labels: scanHistory.map((_, i) => `Scan ${i+1}`),
-            datasets: datasets
+            datasets: [
+                {
+                    label: 'DNA (Auth)',
+                    data: scanHistory.map(s => s.dna_evidence?.auth_score || 0), //
+                    backgroundColor: '#ff4d4d',
+                    borderColor: '#ff4d4d',
+                    borderWidth: 2,
+                    fill: currentChartType === 'line'
+                },
+                {
+                    label: 'Links (Typosquat)',
+                    data: scanHistory.map(s => s.link_evidence?.link_risk_score || 0), //
+                    backgroundColor: '#ffd60a',
+                    borderColor: '#ffd60a',
+                    borderWidth: 2,
+                    fill: currentChartType === 'line'
+                },
+                {
+                    label: 'Profiling (Social)',
+                    data: scanHistory.map(s => s.behavioral_evidence?.manipulation_score || 0), //
+                    backgroundColor: '#30d158',
+                    borderColor: '#30d158',
+                    borderWidth: 2,
+                    fill: currentChartType === 'line'
+                }
+            ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
-                x: { stacked: currentChartType === 'bar' },
+                x: { 
+                    stacked: currentChartType === 'bar',
+                    grid: { color: '#1a2540' } 
+                },
                 y: { 
                     stacked: currentChartType === 'bar',
                     beginAtZero: true,
-                    max: currentChartType === 'bar' ? undefined : 100 
+                    max: currentChartType === 'bar' ? undefined : 100,
+                    grid: { color: '#1a2540' }
                 }
             },
             plugins: {
-                legend: { display: false } // We use custom toggles instead
+                legend: { display: true, position: 'bottom' }
             }
         }
     });

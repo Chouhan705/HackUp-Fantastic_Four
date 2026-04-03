@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <title>PhishGuard — Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <link rel="stylesheet" href="libraries/leaflet.css"/>
+  <script src="libraries/chart.min.js"></script>
+  <script src="libraries/leaflet.js"></script>
 </head>
 <body>
  
@@ -108,17 +109,19 @@
       </div>
     </section>
     <section class="section" id="section-analytics">
-      <div class="card">
+      <div class="card" style="min-height: 400px;">
         <div class="card-head">
           <span class="card-title">Forensic Vector Analysis</span>
           <div class="chart-controls">
             <button id="toggleChartType" class="pill yellow">Switch to Line Graph</button>
-            <label class="vector-toggle"><input type="checkbox" checked value="dna"> DNA</label>
-            <label class="vector-toggle"><input type="checkbox" checked value="links"> Links</label>
-            <label class="vector-toggle"><input type="checkbox" checked value="profiler"> Profile</label>
+            <div class="vector-toggles-row" style="display: flex; gap: 10px; margin-top: 10px;">
+              <label class="vector-toggle"><input type="checkbox" checked value="0"> DNA</label>
+              <label class="vector-toggle"><input type="checkbox" checked value="1"> Links</label>
+              <label class="vector-toggle"><input type="checkbox" checked value="2"> Profiler</label>
+            </div>
           </div>
         </div>
-        <canvas id="vectorChart" height="140"></canvas>
+        <canvas id="vectorChart" style="max-height: 350px;"></canvas>
       </div>
     </section>
  
@@ -147,7 +150,6 @@
   </main>
 </div>
  
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="dashboard.js"></script>
 </body>
 </html>

@@ -16,12 +16,12 @@ async function finalJudge(email, executionContext, agentReports) {
   let criticalOverride = false;
   let overrideReason = "";
 
-  if (facts.whois.domain_age_days < 1 && facts.whois.domain_age_days !== "Unknown") {
+  if (facts.whois && facts.whois.domain_age_days < 1 && facts.whois.domain_age_days !== "Unknown") {
     criticalOverride = true;
     overrideReason = `The sender domain is less than 24 hours old. Highly suspicious.`;
   }
   
-  if (facts.safe_browsing.url_reputation === "malicious") {
+  if (facts.safe_browsing && facts.safe_browsing.url_reputation === "malicious") {
     criticalOverride = true;
     overrideReason += ` URL found on known blacklist.`;
   }
