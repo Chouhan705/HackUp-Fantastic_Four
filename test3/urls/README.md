@@ -36,10 +36,11 @@ The analysis pipeline operates in four main stages:
 ## 🛠️ Resources & Threat Feeds Used
 
 ### Services Requiring API Keys
-These services require you to provide keys via a `.env` file or CLI flags:
+These services require you to provide keys via a `.env` file or CLI flags. **Graceful Degradation:** If an API key or path is absent, the system does not crash. It will simply skip that specific module's checks while continuing to analyze the rest of the URL structure:
+
 - **Google Safe Browsing** (`URL_ANALYZER_GSB_KEY`): Checks for known Malware, Social Engineering, and Potentially Harmful Applications. (Free up to 10k requests/day).
 - **VirusTotal** (`URL_ANALYZER_VT_KEY`): Submits URLs to ~70 external antivirus engines and domain blocklisting services. (Free community tier: 4 reqs/min).
-- **MaxMind GeoLite2** (`URL_ANALYZER_MAXMIND_PATH`): Offline geolocation database (`.mmdb`) mapping IPs to countries to flag bulletproof or high-risk hosting regions.
+- **MaxMind GeoLite2** (`URL_ANALYZER_MAXMIND_PATH`): Offline geolocation database (`.mmdb`) mapping IPs to countries to flag bulletproof or high-risk hosting regions. *(Note: MaxMind releases updates to these free databases every Tuesday. It is recommended to automate a weekly re-download to maintain geographic accuracy).*
 
 ### Free Services (No Keys Required)
 - **OpenPhish**: Pulls and automatically caches their free plain-text list of active phishing URLs.
@@ -61,12 +62,20 @@ These services require you to provide keys via a `.env` file or CLI flags:
     ```
 
 2. **Configure Environment Variables**:
-   Copy `.env` to your project root (if not already present) and populate your keys:
+   Copy `.env.example` to `.env` in your project root and populate your keys:
     ```env
     URL_ANALYZER_GSB_KEY=your_google_key
     URL_ANALYZER_VT_KEY=your_virustotal_key
-    URL_ANALYZER_MAXMIND_PATH=/opt/maxmind/dbs/
+    URL_ANALYZER_MAXMIND_PATH=C:\opt\maxmind
     ```
+
+## 🧪 Testing
+
+The codebase includes a full `pytest` suite simulating inputs across modules. Once set up, just execute:
+
+```bash
+python -m pytest tests/
+```
 
 ---
 
@@ -80,6 +89,12 @@ The tool can be accessed via a Command Line Interface (CLI) or a REST API.
 ```bash
 python -m url_analyzer.cli analyze "https://paypal.com@evil.com"
 ```
+
+**Common Flags**:
+- `--json`: Output raw JSON blocks instead of tabular results.
+- `--no-tls`: Skip active network TLS verification checks entirely.
+- `--no-redirects`: Don't actively trace HTTP 3xx or JS locations.
+- `--timeout [FLOAT]`: Override the default 5.0-second socket/request limit for each network task.
 
 **Output**: A colored summary table detailing the final verdict, score, and all security findings.
 ```text
@@ -121,6 +136,8 @@ uvicorn url_analyzer.api:app --reload
 ```
 
 **Output**: A structured JSON response containing the full `AnalysisResult`.
+
+*Note: The API limits incoming traffic to 10 requests per second per IP using a sliding window. Abuse will receive an HTTP 429 (`Rate limit exceeded`) string with a standard `Retry-After` header.*
 ```json
 {
   "url": "http://xn--pple-43d.com",
