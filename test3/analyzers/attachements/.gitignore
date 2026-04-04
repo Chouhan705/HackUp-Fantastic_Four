@@ -1,0 +1,14 @@
+# Environments
+env/
+venv/
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Authentication tokens
+token.json
