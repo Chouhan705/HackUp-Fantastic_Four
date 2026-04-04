@@ -1,6 +1,7 @@
 import imaplib
 import email
 import hashlib
+import sqlite3
 from email.header import decode_header
 import logging
 from src.core.config import IMAP_SERVER, IMAP_PORT, IMAP_USER, IMAP_PASS, QUARANTINE_DIR
@@ -30,7 +31,7 @@ def process_inbox():
         mail.select("inbox")
 
         # Search for UNREAD emails
-        status, messages = mail.search(None, "UNREAD")
+        status, messages = mail.search(None, "UNSEEN")
         if status != "OK":
             logger.error("Failed to search emails.")
             return {"error": "Failed to search inbox"}
