@@ -1,130 +1,185 @@
-from typing import List, Dict, Any, Set
-
-# Constants for Risk Calculation Logic
-MAX_SCORE_NORMALIZER = 100.0
-
-# Boost coefficients for risk amplification
-STAGE_BOOST_STRONG = 0.20
-STAGE_BOOST_MODERATE = 0.10
-CRITICAL_BOOST = 0.20
-MULTIPLE_HIGH_BOOST = 0.15
-DIVERSITY_DOMAIN_BOOST = 0.10
-DIVERSITY_ATTACK_TYPE_BOOST = 0.10
-
-# Thresholds for severity levels based on event scores
-CRITICAL_SCORE_THRESHOLD = 90
-HIGH_SCORE_THRESHOLD = 70
+from typing import List, Dict, Any
 
 class RiskEngine:
+    """
+    Production-grade RiskEngine for multi-vector phishing detection chains.
+    Computes cross-vector fusion, applies category caps, chain amplifications,
+    and returns human-readable explainable attack summaries.
+    """
+    
+    SEVERITY_WEIGHTS = {
+        "CRITICAL": 1.0,
+        "HIGH": 0.75,
+        "MEDIUM": 0.5,
+        "LOW": 0.25
+    }
+
     def compute(self, chain: Dict[str, Any], events: List[Any]) -> Dict[str, Any]:
-        """
-        Computes the qualitative risk for multi-stage attack chains.
-        """
-        # Filter global events to only those included in the provided chain
         chain_event_ids = set(chain.get("events", []))
         chain_events = [e for e in events if getattr(e, "id", None) in chain_event_ids]
 
         if not chain_events:
             return self._build_empty_response()
 
-        # 2. Extract Features
-        scores = [getattr(e, "score", 0) for e in chain_events]
-        max_score = max(scores) if scores else 0
-        
-        num_events = len(chain_events)
-        
-        domains: Set[str] = set()
-        attack_types: Set[str] = set()
+        confidence = float(chain.get("confidence", 1.0))
+        attack_path = chain.get("attack_path", [])
+
+        # 2. SIGNAL WEIGHTING
+        all_signals = []
         critical_count = 0
-        high_count = 0
 
         for e in chain_events:
-            # Extract unique domains
-            corr_keys = getattr(e, "correlation_keys", {})
-            event_domains = corr_keys.get("domains", []) or corr_keys.get("domain", [])
-            if isinstance(event_domains, str):
-                domains.add(event_domains)
-            elif isinstance(event_domains, list):
-                domains.update(event_domains)
+            signals = getattr(e, "signals", [])
+            # If no formal signals list is present, infer a generic signal from the verdict
+            if not signals:
+                verdict = getattr(e, "verdict", "LOW").upper()
+                signals = [
+                    {
+                        "name": f"Inferred {verdict} activity on {getattr(e, 'type', 'event')}",
+                        "severity": verdict,
+                        "weight": 1.0
+                    }
+                ]
             
-            # Extract unique attack types
-            e_attack_types = getattr(e, "attack_type", [])
-            if isinstance(e_attack_types, str):
-                attack_types.add(e_attack_types)
-            elif isinstance(e_attack_types, list):
-                attack_types.update(e_attack_types)
+            for s in signals:
+                sev = str(s.get("severity", "LOW")).upper()
+                base_weight = self.SEVERITY_WEIGHTS.get(sev, 0.25)
+                # Apply explicit input signal weights if provided
+                s_weight = float(s.get("weight", 1.0))
+                
+                weighted_signal_score = (base_weight * s_weight) * confidence
+                
+                if sev == "CRITICAL":
+                    critical_count += 1
+                
+                all_signals.append({
+                    "name": s.get("name", "Unknown Signal"),
+                    "severity": sev,
+                    "weighted_score": weighted_signal_score
+                })
 
-            # Check for CRITICAL and HIGH signals
-            score = getattr(e, "score", 0)
-            verdict = getattr(e, "verdict", "").upper()
-            if score >= CRITICAL_SCORE_THRESHOLD or verdict == "CRITICAL":
-                critical_count += 1
-            elif score >= HIGH_SCORE_THRESHOLD or verdict == "HIGH":
-                high_count += 1
+        # Sort signals by their computed weighted score
+        all_signals.sort(key=lambda x: x["weighted_score"], reverse=True)
+        top_signals = [s["name"] for s in all_signals[:3]]
 
-        # 3. Risk Logic
+        # 3. VECTOR-LEVEL SCORING & 4. CATEGORY CAPS
+        vectors = {"email": [], "url": [], "attachment": []}
+        for e in chain_events:
+            etype = getattr(e, "type", "unknown").lower()
+            if etype in vectors:
+                vectors[etype].append(e)
+
+        caps = {"email": 0.3, "url": 0.4, "attachment": 0.4}
+        vector_scores = {"email": 0.0, "url": 0.0, "attachment": 0.0}
+
+        for vec, evs in vectors.items():
+            if not evs:
+                continue
+                
+            # Score adjusted based on the raw maximum score
+            max_score = max((getattr(e, "score", 0) for e in evs), default=0)
+            normalized_score = max_score / 100.0
+            # Implement 4. Category Caps preventing specific vectors from dominating
+            vector_scores[vec] = min(normalized_score, caps.get(vec, 0.0))
+
+        # 5. CROSS-VECTOR FUSION
+        base_score = sum(vector_scores.values())
+        active_vectors = sum(1 for v in vector_scores.values() if v > 0)
         
-        # A. Base Score (normalized based on max event score)
-        base_score = min(max_score / MAX_SCORE_NORMALIZER, 1.0)
-        boost = 0.0
+        fusion_boost = 0.0
+        if active_vectors == 3:
+            fusion_boost = 0.2
+        elif active_vectors >= 2:
+            fusion_boost = 0.1
+            
+        fused_score = base_score + fusion_boost
 
-        # B. Stage Amplification
-        if num_events >= 3:
-            boost += STAGE_BOOST_STRONG
-        elif num_events == 2:
-            boost += STAGE_BOOST_MODERATE
+        # 6. CHAIN AMPLIFICATION
+        chain_boost_value = 0.0
+        if len(chain_events) >= 3:
+            fused_score *= 1.2
+            chain_boost_value += 0.2
+            
+        if "email->url" in attack_path and "url->attachment" in attack_path:
+            fused_score += 0.15
+            chain_boost_value += 0.15
 
-        # C. Severity Boost
-        if critical_count > 0:
-            boost += CRITICAL_BOOST
-        if high_count > 1:
-            boost += MULTIPLE_HIGH_BOOST
+        # 7. CRITICAL OVERRIDE
+        critical_override_applied = False
+        if critical_count > 1:
+            if fused_score < 0.85:
+                fused_score = max(fused_score, 0.85)
+                critical_override_applied = True
+        elif critical_count >= 1:
+            if fused_score < 0.70:
+                fused_score = max(fused_score, 0.70)
+                critical_override_applied = True
 
-        # D. Diversity Boost
-        if len(domains) > 1:
-            boost += DIVERSITY_DOMAIN_BOOST
-        if len(attack_types) > 1:
-            boost += DIVERSITY_ATTACK_TYPE_BOOST
+        # 8. NORMALIZATION
+        final_score = max(0.0, min(fused_score, 1.0))
 
-        # E. Confidence Weight
-        raw_score = min(base_score + boost, 1.0)
-        confidence = float(chain.get("confidence", 1.0))
-        
-        final_risk_score = raw_score * confidence
-        final_risk_score = max(0.0, min(final_risk_score, 1.0))
-
-        # 4. Risk Level Mapping
-        if final_risk_score >= 0.85:
-            risk_level = "CRITICAL"
-        elif final_risk_score >= 0.60:
-            risk_level = "HIGH"
-        elif final_risk_score >= 0.30:
-            risk_level = "MEDIUM"
+        # 9. FINAL VERDICT
+        if final_score < 0.3:
+            verdict = "CLEAN"
+        elif final_score < 0.50:
+            verdict = "LOW RISK"
+        elif final_score < 0.75:
+            verdict = "SUSPICIOUS"
         else:
-            risk_level = "LOW"
+            verdict = "DANGEROUS"
 
-        # 5. Output Format
+        # 11. ATTACK SUMMARY Generation
+        summary = self._generate_summary(active_vectors, attack_path, top_signals, critical_count)
+
+        # 10. EXPLAINABILITY Format Output
         return {
-            "risk_score": round(final_risk_score, 4),
-            "risk_level": risk_level,
-            "reasoning": {
-                "max_score": max_score,
-                "event_count": num_events,
-                "critical_present": critical_count > 0,
-                "attack_types": list(attack_types),
-                "domains": list(domains)
-            }
+            "risk_score": round(final_score, 4),
+            "verdict": verdict,
+            "breakdown": {
+                "email_score": round(vector_scores["email"], 4),
+                "url_score": round(vector_scores["url"], 4),
+                "attachment_score": round(vector_scores["attachment"], 4),
+                "chain_boost": round(chain_boost_value, 4),
+                "critical_override": critical_override_applied
+            },
+            "top_signals": top_signals,
+            "attack_summary": summary
         }
+
+    def _generate_summary(self, active_vectors: int, attack_path: List[str], top_signals: List[str], critical_count: int) -> str:
+        parts = []
+        
+        if "email->url" in attack_path and ("url->attachment" in attack_path or "email->attachment" in attack_path):
+            parts.append("This attack involves an email delivering a phishing URL which leads to a malicious payload.")
+        elif "email->url" in attack_path:
+            parts.append("This attack originates from an email routing to a suspicious URL.")
+        elif "url->attachment" in attack_path:
+            parts.append("This attack involves a URL downloading or directly linking to a suspicious attachment.")
+        elif active_vectors == 1:
+            parts.append("This is an isolated single-vector attack.")
+        else:
+            parts.append("This is a multi-stage attack involving across multiple vectors.")
+
+        if top_signals:
+            sig_str = ", ".join(top_signals[:2])
+            parts.append(f"Critical signals include {sig_str}, resulting in a mapped multi-stage attack.")
+
+        if critical_count > 0:
+            parts.append(f"The presence of {critical_count} critical signal(s) escalates the threat level significantly.")
+
+        return " ".join(parts)
 
     def _build_empty_response(self) -> Dict[str, Any]:
         return {
             "risk_score": 0.0,
-            "risk_level": "LOW",
-            "reasoning": {
-                "max_score": 0,
-                "event_count": 0,
-                "critical_present": False,
-                "attack_types": [],
-                "domains": []
-            }
+            "verdict": "CLEAN",
+            "breakdown": {
+                "email_score": 0.0,
+                "url_score": 0.0,
+                "attachment_score": 0.0,
+                "chain_boost": 0.0,
+                "critical_override": False
+            },
+            "top_signals": [],
+            "attack_summary": "No valid events were able to trigger risk profiling inside the chain."
         }
