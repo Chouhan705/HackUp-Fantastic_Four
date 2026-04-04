@@ -11,8 +11,9 @@ from src.analyzers.office import OfficeAnalyzer
 from src.analyzers.pdf import PDFAnalyzer
 from src.analyzers.archive import ArchiveAnalyzer
 
-# Risk Engine
+# Risk Engine & Sandbox
 from src.core.risk_engine import calculate_risk
+from src.core.sandbox_client import run_sandbox
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -116,6 +117,17 @@ def run_analysis():
 
             # Run risk engine to calculate final score
             calculate_risk(sha256)
+            
+            # Fetch the updated score to see if sandbox auto-submission is needed
+            cursor.execute("SELECT risk_score FROM attachments WHERE id = ?", (att_id,))
+            risk_row = cursor.fetchone()
+            risk_score = risk_row["risk_score"] if risk_row else 0
+            
+            # Auto-submit files scoring >= 70 to the sandbox
+            if risk_score >= 70:
+                logger.warning(f"File {sha256} scored {risk_score} (>= 70). Auto-submitting to Sandbox...")
+                file_path = QUARANTINE_DIR / sha256
+                run_sandbox(sha256, file_path)
 
             cursor.execute(
                 "UPDATE attachments SET status = 'analyzed' WHERE id = ?",

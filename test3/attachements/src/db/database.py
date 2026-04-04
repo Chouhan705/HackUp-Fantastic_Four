@@ -48,6 +48,21 @@ def init_db():
             FOREIGN KEY(attachment_sha256) REFERENCES attachments(sha256)
         )
     """)
+    
+    # Sandbox Results table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sandbox_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            attachment_sha256 TEXT UNIQUE,
+            provider TEXT,
+            is_flagged BOOLEAN,
+            detection_rate TEXT,
+            flagged_by TEXT,
+            raw_report TEXT,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(attachment_sha256) REFERENCES attachments(sha256)
+        )
+    """)
 
     conn.commit()
     conn.close()
