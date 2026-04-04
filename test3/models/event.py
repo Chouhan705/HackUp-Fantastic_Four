@@ -26,8 +26,8 @@ class Event:
     def _validate_types(self):
         if not isinstance(self.id, str) or not self.id:
             raise ValueError("id must be a non-empty string")
-        if self.type not in {"email", "url", "attachment"}:
-            raise ValueError("type must be 'email', 'url', or 'attachment'")
+        if self.type not in {"email", "url", "attachment", "behaviour", "clustering"}:
+            raise ValueError("type must be 'email', 'url', 'attachment', 'behaviour', or 'clustering'")
         if not isinstance(self.timestamp, datetime):
             raise TypeError("timestamp must be a datetime object")
         if not isinstance(self.iocs, dict):
