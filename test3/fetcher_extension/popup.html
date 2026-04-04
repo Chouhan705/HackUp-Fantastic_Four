@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Phishing Detector</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 260px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff;
+      color: #1a1a18;
+    }
+
+    .header {
+      padding: 16px;
+      border-bottom: 1px solid #ebebeb;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-icon { font-size: 22px; }
+    .header-title { font-size: 14px; font-weight: 600; }
+    .header-sub   { font-size: 11px; color: #888; margin-top: 1px; }
+
+    .body { padding: 14px 16px; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #f8f8f6;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .status-label { font-size: 12px; color: #555; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #d0d0d0;
+    }
+    .status-dot.active { background: #639922; }
+
+    .auth-btn {
+      width: 100%;
+      padding: 9px 0;
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .auth-btn:hover { background: #1558c0; }
+    .auth-btn:disabled { background: #aaa; cursor: default; }
+
+    .note {
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      padding: 10px 16px;
+      border-top: 1px solid #ebebeb;
+      font-size: 10px;
+      color: #ccc;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <span class="header-icon">🛡️</span>
+    <div>
+      <div class="header-title">Phishing Detector</div>
+      <div class="header-sub">Gmail Email Scanner</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="status-row">
+      <span class="status-label">Gmail Auth</span>
+      <span class="status-dot" id="auth-dot"></span>
+    </div>
+
+    <button class="auth-btn" id="auth-btn">Connect Gmail Account</button>
+
+    <p class="note" id="note">Authorize to enable scanning. Only read access is requested.</p>
+  </div>
+
+  <div class="footer">Open Gmail to start scanning emails</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
