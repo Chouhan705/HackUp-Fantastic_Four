@@ -18,7 +18,8 @@ CATEGORY_CAPS: dict[CheckCategory, int] = {
     CheckCategory.ENCODING: 60,
     CheckCategory.REDIRECT: 40,
     CheckCategory.TLS: 50,
-    CheckCategory.REPUTATION: 80
+    CheckCategory.REPUTATION: 80,
+    CheckCategory.BEHAVIOR: 70
 }
 
 

@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 import logging
 
 logger = logging.getLogger(__name__)
 
 
 class Severity(int, Enum):
-    """Findings severity levels with associated scoring."""
     INFO = 5
     LOW = 15
     MEDIUM = 25
@@ -18,7 +18,6 @@ class Severity(int, Enum):
 
 
 class CheckCategory(str, Enum):
-    """Categories of URL checks."""
     STRUCTURAL = "STRUCTURAL"
     UNICODE = "UNICODE"
     HEURISTIC = "HEURISTIC"
@@ -26,11 +25,11 @@ class CheckCategory(str, Enum):
     REDIRECT = "REDIRECT"
     TLS = "TLS"
     REPUTATION = "REPUTATION"
+    BEHAVIOR = "BEHAVIOR"
 
 
 @dataclass(frozen=True)
 class Finding:
-    """A single finding from a check."""
     check: str
     category: CheckCategory
     severity: Severity
@@ -40,7 +39,6 @@ class Finding:
 
 @dataclass
 class AnalysisConfig:
-    """Configuration for the analysis."""
     resolve_redirects: bool = True
     check_tls: bool = True
     check_domain_age: bool = True
@@ -54,7 +52,6 @@ class AnalysisConfig:
 
 @dataclass(frozen=True)
 class ParsedURL:
-    """Components of a parsed URL."""
     raw: str
     scheme: str
     hostname: str
@@ -69,12 +66,35 @@ class ParsedURL:
 
 
 @dataclass(frozen=True)
+class Signal:
+    id: str
+    name: str
+    category: str
+    severity: str
+    weight: int
+    confidence: float
+    evidence: str
+
+
+@dataclass(frozen=True)
 class AnalysisResult:
-    """Overall result of the analysis."""
-    url: str
+    id: str
+    session_id: str | None
+    parent_id: str | None
+    type: str
+    source: str
+    timestamp: str
+    input: str
     normalized_url: str
+    iocs: dict[str, Any]
+    infrastructure: dict[str, Any]
+    features: dict[str, Any]
+    signals: list[Signal]
+    graph: dict[str, list[dict[str, str]]]
+    attack_type: list[str]
+    attack_story: str
     score: int
     verdict: str
+    confidence: float
     findings: list[Finding]
-    redirect_chain: list[str]
     analysis_time_ms: float

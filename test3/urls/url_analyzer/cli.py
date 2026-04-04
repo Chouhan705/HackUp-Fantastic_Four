@@ -46,6 +46,10 @@ def analyze_cli(url, output_json, no_redirects, no_tls, timeout, gsb_key, vt_key
         maxmind_db_path=maxmind
     )
     
+    if output_json:
+        import logging
+        logging.getLogger().setLevel(logging.CRITICAL)
+        
     result = asyncio.run(analyze(url, config))
     
     if output_json:
@@ -63,19 +67,21 @@ def analyze_cli(url, output_json, no_redirects, no_tls, timeout, gsb_key, vt_key
     color = verdict_colors.get(result.verdict, "white")
     click.secho(f"Verdict: {result.verdict}", fg=color, bold=True)
     click.echo(f"Score: {result.score}/100")
+    click.echo(f"Confidence: {result.confidence}")
+    click.echo(f"Attack Type: {', '.join(result.attack_type)}")
     
-    if result.findings:
-        click.echo("\nFindings:")
-        click.echo(f"{'Severity':<10} | {'Category':<12} | {'Check':<25} | {'Evidence'}")
-        click.echo("-" * 80)
+    if result.signals:
+        click.echo("\nSignals:")
+        click.echo(f"{'Severity':<10} | {'Category':<12} | {'Signal Name':<25} | {'Weight':<6}")
+        click.echo("-" * 65)
         
-        # Sort findings by severity weight
-        sorted_findings = sorted(result.findings, key=lambda f: f.severity.value, reverse=True)
+        # Sort signals by weight descending
+        sorted_signals = sorted(result.signals, key=lambda s: s.weight, reverse=True)
         
-        for f in sorted_findings:
-            sev_color = verdict_colors.get("DANGEROUS" if f.severity.value >= 40 else "SUSPICIOUS" if f.severity.value >= 25 else "LOW RISK" if f.severity.value >= 15 else "CLEAN", "white")
-            click.secho(f"{f.severity.name:<10}", fg=sev_color, nl=False)
-            click.echo(f" | {f.category.value:<12} | {f.check:<25} | {f.evidence[:60]}")
+        for s in sorted_signals:
+            sev_color = verdict_colors.get("DANGEROUS" if s.weight >= 40 else "SUSPICIOUS" if s.weight >= 25 else "LOW RISK" if s.weight >= 15 else "CLEAN", "white")
+            click.secho(f"{s.severity:<10}", fg=sev_color, nl=False)
+            click.echo(f" | {s.category:<12} | {s.name:<25} | {s.weight:<6}")
             
     click.echo(f"\nAnalysis time: {result.analysis_time_ms / 1000.:.2f}s")
 

@@ -12,6 +12,8 @@ import aiohttp
 import certifi
 import dns.resolver
 import geoip2.database
+import io
+import contextlib
 import ssl
 import whois
 
@@ -30,8 +32,14 @@ async def check_domain_age(domain: str, config: AnalysisConfig) -> Finding | Non
         age_days = cached
     else:
         loop = asyncio.get_event_loop()
+        
+        def _silent_whois(d: str):
+            f = io.StringIO()
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                return whois.whois(d)
+
         try:
-            w = await loop.run_in_executor(None, whois.whois, domain)
+            w = await loop.run_in_executor(None, _silent_whois, domain)
             cd = w.creation_date
             if not cd:
                 await cache.set(cache_key, "error")
