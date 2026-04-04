@@ -1,1 +1,3 @@
 test3/attachements/.env
+/test3/attachements/venv
+test3/attachements/src/core/__pycache__/attachment_report.cpython-311.pyc
