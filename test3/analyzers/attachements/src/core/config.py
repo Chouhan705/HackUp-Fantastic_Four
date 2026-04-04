@@ -2,7 +2,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..', '.env')
+load_dotenv(env_path)
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent

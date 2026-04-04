@@ -16,10 +16,9 @@ from googleapiclient.discovery import build
 # ---------------------------------------------------------------------------
 # OAuth2 configuration
 # ---------------------------------------------------------------------------
-load_dotenv()  # loads .env from the current working directory
-
-SCOPES    = ["https://www.googleapis.com/auth/gmail.readonly"]
-TOKEN_FILE = "token.json"   # created automatically after first login
+import os
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.env')
+load_dotenv(env_path)  # strictly load the unified root .env file
 
 def _get_client_config() -> dict:
     """
@@ -53,28 +52,42 @@ def _get_client_config() -> dict:
 # Gmail authentication & fetching helpers
 # ---------------------------------------------------------------------------
 
+import os
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+TOKEN_FILE = "token.json"
+
+
 def get_gmail_service():
-    """
-    Authenticates with Google via OAuth2 and returns a Gmail API service object.
-    Credentials are loaded from GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET in .env.
-    On the first run a browser window opens for user consent.
-    On subsequent runs the saved token.json is refreshed silently.
-    """
     creds = None
 
+    # Load token if exists
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
+    # Refresh or create new creds
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_config(_get_client_config(), SCOPES)
+            flow = InstalledAppFlow.from_client_config({
+                "installed": {
+                    "client_id": os.environ["GOOGLE_CLIENT_ID"],
+                    "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            }, SCOPES)
+
             creds = flow.run_local_server(port=0)
 
-        with open(TOKEN_FILE, "w") as token_fp:
-            token_fp.write(creds.to_json())
-        print(f"[auth] Token saved to {TOKEN_FILE}")
+        # Save token
+        with open(TOKEN_FILE, "w") as f:
+            f.write(creds.to_json())
 
     return build("gmail", "v1", credentials=creds)
 

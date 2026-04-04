@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from typing import Dict, Any
-from src.analyzers.base import BaseAnalyzer
+from analyzers.attachements.src.analyzers.base import BaseAnalyzer
 
 class PDFAnalyzer(BaseAnalyzer):
     name = "pdf_structure"

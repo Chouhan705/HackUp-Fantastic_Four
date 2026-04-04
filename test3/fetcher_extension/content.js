@@ -31,14 +31,14 @@
   function createSidebar() {
     // Use Shadow DOM so Gmail CSS doesn't bleed in
     const host = document.createElement("div");
-    host.id    = "phishing-detector-host";
+    host.id    = "nophishzone-host";
     host.style.cssText = `
       position: fixed;
       top: 120px;
       right: 0;
       width: 300px;
       z-index: 9999;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     `;
 
     const shadow = host.attachShadow({ mode: "open" });
@@ -48,55 +48,68 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         #panel {
-          background: #fff;
-          border: 1px solid #e0e0e0;
+          background: #1e1e2e;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-right: none;
-          border-radius: 12px 0 0 12px;
-          box-shadow: -4px 4px 24px rgba(0,0,0,0.10);
+          border-radius: 14px 0 0 14px;
+          box-shadow: -8px 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
           overflow: hidden;
-          transition: width 0.25s ease;
+          transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          color: #e0e0e0;
         }
 
         #header {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 12px 14px;
-          background: #f8f8f6;
-          border-bottom: 1px solid #ebebeb;
+          gap: 10px;
+          padding: 14px 16px;
+          background: linear-gradient(135deg, #4a00e0 0%, #8e2de2 100%);
+          color: #ffffff;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           cursor: pointer;
           user-select: none;
         }
-        #header-icon { font-size: 18px; }
-        #header-title { font-size: 13px; font-weight: 600; color: #1a1a18; flex: 1; }
-        #collapse-btn { font-size: 16px; color: #888; line-height: 1; }
+        #header-icon { font-size: 20px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        #header-title { font-size: 14px; font-weight: 600; color: #ffffff; flex: 1; letter-spacing: 0.3px; }
+        #collapse-btn { font-size: 20px; color: rgba(255, 255, 255, 0.8); line-height: 1; transition: color 0.2s; }
+        #header:hover #collapse-btn { color: #fff; }
 
-        #body { padding: 14px; }
+        #body { padding: 16px; }
 
         /* States */
         #state-idle, #state-scanning, #state-result, #state-error { display: none; }
         #state-idle.active, #state-scanning.active,
-        #state-result.active, #state-error.active { display: block; }
+        #state-result.active, #state-error.active { display: block; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
         #scan-btn {
           width: 100%;
-          padding: 9px 0;
-          background: #1a73e8;
+          padding: 10px 0;
+          background: linear-gradient(135deg, #1a73e8 0%, #1558c0 100%);
           color: #fff;
           border: none;
           border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          transition: background 0.15s;
+          box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+          transition: all 0.2s ease;
         }
-        #scan-btn:hover { background: #1558c0; }
+        #scan-btn:hover { background: linear-gradient(135deg, #1558c0 0%, #0d3b82 100%); transform: translateY(-1px) scale(1.02); box-shadow: 0 6px 16px rgba(26, 115, 232, 0.4); }
+        #scan-btn:active { transform: translateY(1px) scale(0.98); }
 
         .scanning-text {
-          font-size: 13px;
-          color: #555;
+          font-size: 14px;
+          font-weight: 500;
+          color: #444;
           text-align: center;
-          padding: 8px 0;
+          padding: 12px 0;
         }
         .dots::after {
           content: '';
@@ -111,81 +124,119 @@
         /* Verdict */
         .verdict-badge {
           display: inline-block;
-          padding: 4px 12px;
+          padding: 6px 14px;
           border-radius: 100px;
-          font-size: 12px;
-          font-weight: 600;
-          margin-bottom: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          margin-bottom: 16px;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
         }
-        .verdict-safe      { background: #eaf3de; color: #3b6d11; }
-        .verdict-suspicious{ background: #faeeda; color: #854f0b; }
-        .verdict-phishing  { background: #fcebeb; color: #a32d2d; }
+        .verdict-safe      { background: #eaf3de; color: #3b6d11; border: 1px solid #d4ebbc; box-shadow: 0 0 12px rgba(99, 153, 34, 0.2); }
+        .verdict-suspicious{ background: #faeeda; color: #854f0b; border: 1px solid #f2d6a2; box-shadow: 0 0 16px rgba(239, 159, 39, 0.4); animation: glow-suspicious 2s infinite alternate; }
+        .verdict-phishing  { background: #fcebeb; color: #a32d2d; border: 1px solid #f3c2c2; box-shadow: 0 0 16px rgba(226, 75, 74, 0.4); animation: glow-phishing 2s infinite alternate; }
+
+        @keyframes glow-phishing {
+          from { box-shadow: 0 0 10px rgba(226, 75, 74, 0.3); }
+          to { box-shadow: 0 0 20px rgba(226, 75, 74, 0.7); }
+        }
+        @keyframes glow-suspicious {
+          from { box-shadow: 0 0 10px rgba(239, 159, 39, 0.3); }
+          to { box-shadow: 0 0 20px rgba(239, 159, 39, 0.7); }
+        }
 
         .score-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 10px;
+          margin-bottom: 12px;
         }
-        .score-label { font-size: 12px; color: #666; }
-        .score-val   { font-size: 22px; font-weight: 700; color: #1a1a18; }
+        .score-label { font-size: 13px; font-weight: 600; color: #555; }
+        .score-val   { font-size: 26px; font-weight: 800; color: #111; letter-spacing: -0.5px; }
 
         .score-bar-track {
-          height: 6px;
-          background: #eee;
-          border-radius: 3px;
-          margin-bottom: 14px;
+          height: 8px;
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 4px;
+          margin-bottom: 20px;
           overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
         }
         .score-bar-fill {
           height: 100%;
-          border-radius: 3px;
-          transition: width 0.6s ease;
+          border-radius: 4px;
+          transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+          animation: bar-pulse 2s infinite;
         }
 
-        .signals-title { font-size: 11px; font-weight: 600; color: #888; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 8px; }
+        @keyframes bar-pulse {
+          0% { filter: brightness(1); }
+          50% { filter: brightness(1.15); }
+          100% { filter: brightness(1); }
+        }
+
+        .signals-title { font-size: 12px; font-weight: 700; color: #777; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+        
         .signal-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 7px 10px;
-          background: #f8f8f6;
-          border-radius: 7px;
-          margin-bottom: 6px;
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          border-radius: 10px;
+          margin-bottom: 8px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+          transition: transform 0.2s, box-shadow 0.2s;
         }
-        .signal-engine { font-size: 12px; font-weight: 500; color: #333; }
-        .signal-score  { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 100px; }
-        .signal-flags  { font-size: 11px; color: #888; margin-top: 2px; }
+        .signal-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        
+        .signal-engine { font-size: 13px; font-weight: 600; color: #222; }
+        .signal-score  { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 100px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .signal-flags  { font-size: 11px; color: #777; margin-top: 3px; font-weight: 500; }
 
-        .sig-high { background: #fcebeb; color: #a32d2d; }
-        .sig-mid  { background: #faeeda; color: #854f0b; }
-        .sig-low  { background: #eaf3de; color: #3b6d11; }
+        .sig-high { background: rgba(226, 75, 74, 0.2); color: #ff6b6b; border: 1px solid rgba(255, 107, 107, 0.3); }
+        .sig-mid  { background: rgba(239, 159, 39, 0.2); color: #fbc658; border: 1px solid rgba(251, 198, 88, 0.3); }
+        .sig-low  { background: rgba(99, 153, 34, 0.2); color: #8fd14f; border: 1px solid rgba(143, 209, 79, 0.3); }
 
-        .cached-note { font-size: 10px; color: #bbb; text-align: right; margin-top: 10px; }
+        .cached-note { font-size: 11px; font-weight: 500; color: #777; text-align: right; margin-top: 14px; }
 
-        .error-text { font-size: 12px; color: #a32d2d; line-height: 1.5; }
+        .error-text { font-size: 13px; font-weight: 500; color: #ff6b6b; line-height: 1.5; background: rgba(226, 75, 74, 0.2); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 107, 107, 0.3); }
         .retry-btn {
-          margin-top: 10px;
-          font-size: 12px;
-          padding: 6px 14px;
-          border: 1px solid #e24b4a;
+          margin-top: 12px;
+          width: 100%;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 9px 14px;
+          border: 1px solid #ff6b6b;
           background: transparent;
-          color: #a32d2d;
-          border-radius: 7px;
+          color: #ff6b6b;
+          border-radius: 8px;
           cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(226, 75, 74, 0.1);
         }
+        .retry-btn:hover {
+          background: rgba(226, 75, 74, 0.1);
+          transform: translateY(-1px) scale(1.02);
+          box-shadow: 0 4px 10px rgba(226, 75, 74, 0.3);
+        }
+        .retry-btn:active { transform: translateY(1px) scale(0.98); }
       </style>
 
       <div id="panel">
         <div id="header">
           <span id="header-icon">🛡️</span>
-          <span id="header-title">Phishing Detector</span>
+          <span id="header-title">NoPhishZone</span>
           <span id="collapse-btn">−</span>
         </div>
         <div id="body">
           <!-- IDLE: waiting for user to trigger scan -->
           <div id="state-idle" class="active">
-            <p style="font-size:12px;color:#666;margin-bottom:12px;line-height:1.5">
+            <p style="font-size:13px;color:#aaa;margin-bottom:14px;line-height:1.5;font-weight:500;">
               Click below to scan this email for phishing signals.
             </p>
             <button id="scan-btn">Scan this email</button>
@@ -230,7 +281,7 @@
   }
 
   function renderResult(shadow, result) {
-    const { score, verdict, signals, cached } = result;
+    const { score, verdict, signals, cached, malicious_urls, explanation } = result;
 
     // Badge
     const badge = shadow.getElementById("verdict-badge");
@@ -245,6 +296,27 @@
     const color = score >= 70 ? "#e24b4a" : score >= 40 ? "#ef9f27" : "#639922";
     bar.style.width      = `${score}%`;
     bar.style.background = color;
+
+    // Additional info rendering (URLs and explanations)
+    let urlHtml = "";
+    if (malicious_urls && malicious_urls.length > 0) {
+      urlHtml = `
+        <div class="signals-title" style="margin-top: 14px;">Malicious URLs Found</div>
+        <div style="font-size: 11px; padding: 7px 10px; background: #fcebeb; border-radius: 7px; color: #a32d2d; margin-bottom: 10px; word-wrap: break-word;">
+          ${malicious_urls.map(u => `<div>🔗 ${u}</div>`).join("")}
+        </div>
+      `;
+    }
+
+    let expHtml = "";
+    if (explanation) {
+      expHtml = `
+        <div class="signals-title" style="margin-top: 10px;">Analyzer Findings</div>
+        <div style="font-size: 11px; padding: 7px 10px; background: #faeeda; border-radius: 7px; color: #854f0b; margin-bottom: 10px; word-wrap: break-word;">
+          ${explanation}
+        </div>
+      `;
+    }
 
     // Signals
     const list = shadow.getElementById("signals-list");
@@ -263,12 +335,23 @@
       list.appendChild(div);
     });
 
+    // Remove existing details if they were appended before
+    const existingDetails = shadow.getElementById("extra-details-container");
+    if (existingDetails) existingDetails.remove();
+
+    if (urlHtml || expHtml) {
+      const detailsContainer = document.createElement("div");
+      detailsContainer.id = "extra-details-container";
+      detailsContainer.innerHTML = urlHtml + expHtml;
+      list.parentNode.insertBefore(detailsContainer, list.nextSibling);
+    }
+
     shadow.getElementById("cached-note").textContent = cached ? "⚡ Cached result" : "";
     setState(shadow, "result");
   }
 
   function engineLabel(engine) {
-    return { url: "🔗 URL Analysis", nlp: "🧠 Body / NLP", headers: "📋 Headers" }[engine] || engine;
+    return { url: "🔗 URL Analysis", nlp: "🧠 Body / NLP", headers: "📋 Headers", attachments: "📎 Attachments" }[engine] || engine;
   }
 
   // ─── Sidebar bootstrap ────────────────────────────────────────────────────

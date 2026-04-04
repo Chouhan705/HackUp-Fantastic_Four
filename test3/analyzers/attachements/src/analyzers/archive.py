@@ -1,7 +1,7 @@
 import zipfile
 from pathlib import Path
 from typing import Dict, Any
-from src.analyzers.base import BaseAnalyzer
+from analyzers.attachements.src.analyzers.base import BaseAnalyzer
 
 class ArchiveAnalyzer(BaseAnalyzer):
     name = "zip_inspector"

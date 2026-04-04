@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Phishing Detector",
+  "name": "NoPhishZone",
   "version": "1.0.0",
   "description": "Scans Gmail emails for phishing signals using URL, NLP, and header analysis.",
 
@@ -8,13 +8,17 @@
     "identity",
     "storage",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "sidePanel"
   ],
 
   "host_permissions": [
     "https://mail.google.com/*",
     "https://gmail.googleapis.com/*",
-    "https://www.googleapis.com/*"
+    "https://www.googleapis.com/*",
+    "http://*/*",
+    "https://*/*",
+    "http://localhost:*/*"
   ],
 
   "oauth2": {
@@ -25,31 +29,19 @@
   },
 
   "background": {
-    "service_worker": "background/service_worker.js",
+    "service_worker": "service_worker.js",
     "type": "module"
   },
 
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
-      "js": ["content/content.js"],
-      "css": ["content/sidebar.css"],
+      "js": ["/content.js"],
       "run_at": "document_idle"
     }
   ],
 
   "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
-  },
-
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "default_popup": "popup.html"
   }
 }

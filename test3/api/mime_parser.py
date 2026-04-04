@@ -55,6 +55,7 @@ class Attachment:
     filename:     Optional[str] = None
     content_type: str = ""
     size_bytes:   int = 0
+    content:      bytes = b""
 
 
 @dataclass
@@ -233,6 +234,7 @@ def collect_attachments(msg) -> list[Attachment]:
                 filename     = filename,
                 content_type = part.get_content_type(),
                 size_bytes   = len(payload),
+                content      = payload,
             ))
     return attachments
 

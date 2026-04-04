@@ -3,74 +3,97 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Phishing Detector</title>
+  <title>NoPhishZone</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 260px;
+      width: 400px;
+      min-height: 350px;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #fff;
-      color: #1a1a18;
+      background: #1e1e2e;
+      backdrop-filter: blur(12px);
+      color: #e0e0e0;
+      border-radius: 14px;
+      overflow: hidden;
     }
 
     .header {
-      padding: 16px;
-      border-bottom: 1px solid #ebebeb;
+      padding: 18px 16px;
+      background: linear-gradient(135deg, #1a73e8, #603bb8);
+      color: white;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      box-shadow: inset 0 -1px 0 rgba(255,255,255,0.1);
     }
-    .header-icon { font-size: 22px; }
-    .header-title { font-size: 14px; font-weight: 600; }
-    .header-sub   { font-size: 11px; color: #888; margin-top: 1px; }
+    .header-icon { font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .header-title { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+    .header-sub   { font-size: 11px; color: rgba(255,255,255,0.8); margin-top: 2px; }
 
-    .body { padding: 14px 16px; }
+    .body { padding: 18px 16px; }
 
     .status-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 10px 12px;
-      background: #f8f8f6;
+      background: rgba(255, 255, 255, 0.05);
       border-radius: 8px;
       margin-bottom: 12px;
     }
-    .status-label { font-size: 12px; color: #555; }
+    .status-label { font-size: 12px; color: #aaa; }
     .status-dot {
       width: 8px; height: 8px;
       border-radius: 50%;
-      background: #d0d0d0;
+      background: #555;
+      box-shadow: 0 0 4px rgba(0,0,0,0.2);
     }
-    .status-dot.active { background: #639922; }
+    .status-dot.active { background: #639922; box-shadow: 0 0 6px #639922; }
 
     .auth-btn {
       width: 100%;
-      padding: 9px 0;
+      padding: 10px 0;
       background: #1a73e8;
       color: #fff;
       border: none;
       border-radius: 8px;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
+      box-shadow: 0 4px 10px rgba(26,115,232,0.3);
+      transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
-    .auth-btn:hover { background: #1558c0; }
-    .auth-btn:disabled { background: #aaa; cursor: default; }
+    .auth-btn:hover { background: #1558c0; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(26,115,232,0.4); }
+    .auth-btn:disabled { background: #555; color: #888; cursor: default; transform: none; box-shadow: none; }
 
     .note {
-      font-size: 11px;
+      font-size: 12px;
       color: #aaa;
       text-align: center;
-      margin-top: 12px;
+      margin-top: 14px;
       line-height: 1.5;
     }
 
+    .breakdown {
+      font-size: 11px;
+      color: #ddd;
+      margin-top: 14px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: none; /* hidden until scan works */
+      text-align: left;
+      line-height: 1.4;
+    }
+
     .footer {
-      padding: 10px 16px;
-      border-top: 1px solid #ebebeb;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
       font-size: 10px;
-      color: #ccc;
+      color: #777;
       text-align: center;
+      background: rgba(255, 255, 255, 0.02);
     }
   </style>
 </head>
@@ -78,23 +101,20 @@
   <div class="header">
     <span class="header-icon">🛡️</span>
     <div>
-      <div class="header-title">Phishing Detector</div>
-      <div class="header-sub">Gmail Email Scanner</div>
+      <div class="header-title">NoPhishZone</div>
+      <div class="header-sub">Current Website Scanner</div>
     </div>
   </div>
 
   <div class="body">
-    <div class="status-row">
-      <span class="status-label">Gmail Auth</span>
-      <span class="status-dot" id="auth-dot"></span>
-    </div>
+    <button class="auth-btn" id="scan-btn">Scan This Website</button>       
 
-    <button class="auth-btn" id="auth-btn">Connect Gmail Account</button>
+    <p class="note" id="note">Click to scan the current website for phishing signals.</p>
 
-    <p class="note" id="note">Authorize to enable scanning. Only read access is requested.</p>
+    <div class="breakdown" id="breakdown"></div>
   </div>
 
-  <div class="footer">Open Gmail to start scanning emails</div>
+  <div class="footer" id="result-footer">Ready to scan.</div>
 
   <script src="popup.js"></script>
 </body>

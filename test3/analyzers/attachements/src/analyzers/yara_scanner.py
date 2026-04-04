@@ -1,19 +1,29 @@
-import yara
+try:
+    import yara
+    YARA_AVAILABLE = True
+except Exception as e:
+    YARA_AVAILABLE = False
+    print(f"Warning: YARA is not available or libyara.dll is missing: {e}")
+
 from pathlib import Path
 from typing import Dict, Any
-from src.analyzers.base import BaseAnalyzer
-from src.core.config import BASE_DIR
+from analyzers.attachements.src.analyzers.base import BaseAnalyzer
+from analyzers.attachements.src.core.config import BASE_DIR
 
 class YaraAnalyzer(BaseAnalyzer):
     name = "yara"
 
     def __init__(self):
+        self.rules = None
         # Compile rules once when the analyzer is instantiated
-        rule_path = BASE_DIR / "yara_rules" / "rules.yar"
-        if rule_path.exists():
-            self.rules = yara.compile(filepath=str(rule_path))
-        else:
-            self.rules = None
+        if YARA_AVAILABLE:
+            rule_path = BASE_DIR / "yara_rules" / "rules.yar"
+            if rule_path.exists():
+                try:
+                    self.rules = yara.compile(filepath=str(rule_path))
+                except Exception as e:
+                    print(f"Failed to compile YARA rules: {e}")
+
 
     def analyze(self, file_path: Path) -> Dict[str, Any]:
         if not self.rules:

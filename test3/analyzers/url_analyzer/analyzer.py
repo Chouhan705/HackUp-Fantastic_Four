@@ -11,26 +11,28 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-import url_analyzer.checks.encoding as c_encoding
-import url_analyzer.checks.heuristic as c_heuristic
-import url_analyzer.checks.redirect as c_redirect
-import url_analyzer.checks.reputation as c_reputation
-import url_analyzer.checks.structural as c_structural
-import url_analyzer.checks.tls as c_tls
-import url_analyzer.checks.unicode as c_unicode
-from url_analyzer.models import AnalysisConfig, AnalysisResult, ParsedURL, Signal, Severity
-from url_analyzer.normalizer import normalize_url, parse_url
-from url_analyzer.scorer import score, SEVERITY_WEIGHTS
-from url_analyzer.ioc_extractor import extract_iocs
-from url_analyzer.feature_builder import build_features
-from url_analyzer.graph_builder import build_graph
-from url_analyzer.cache import cache
+import analyzers.url_analyzer.checks.encoding as c_encoding
+import analyzers.url_analyzer.checks.heuristic as c_heuristic
+import analyzers.url_analyzer.checks.redirect as c_redirect
+import analyzers.url_analyzer.checks.reputation as c_reputation
+import analyzers.url_analyzer.checks.structural as c_structural
+import analyzers.url_analyzer.checks.tls as c_tls
+import analyzers.url_analyzer.checks.unicode as c_unicode
+from analyzers.url_analyzer.models import AnalysisConfig, AnalysisResult, ParsedURL, Signal, Severity
+from analyzers.url_analyzer.normalizer import normalize_url, parse_url
+from analyzers.url_analyzer.scorer import score, SEVERITY_WEIGHTS
+from analyzers.url_analyzer.ioc_extractor import extract_iocs
+from analyzers.url_analyzer.feature_builder import build_features
+from analyzers.url_analyzer.graph_builder import build_graph
+from analyzers.url_analyzer.cache import cache
 
 logger = logging.getLogger(__name__)
 
 
 def _load_env_config(config: AnalysisConfig) -> AnalysisConfig:
-    load_dotenv()
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '.env')
+    load_dotenv(env_path)
     if not config.google_api_key:
         config.google_api_key = os.environ.get("URL_ANALYZER_GSB_KEY")
     if not config.virustotal_api_key:

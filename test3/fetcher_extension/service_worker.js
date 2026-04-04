@@ -1,7 +1,7 @@
 // background/service_worker.js
 // Handles: OAuth2 token management, Gmail API raw fetch, backend communication
 
-const BACKEND_URL = "https://your-backend.example.com"; // 🔧 Replace with your backend URL
+const BACKEND_URL = "http://localhost:8000"; // 🔧 Configured for local FastAPI backend
 const GMAIL_API   = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 // ─── OAuth2 Token ────────────────────────────────────────────────────────────
