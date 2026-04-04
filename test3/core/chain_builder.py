@@ -1,77 +1,164 @@
 import uuid
-import networkx as nx
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any, Set, Optional
+from collections import defaultdict, deque
 
 class ChainBuilder:
-    def build_chains(self, correlated_pairs: List[Tuple[Any, Any]]) -> List[Dict[str, Any]]:
-        """
-        Builds directed chains from correlated event pairs.
-        Merges overlapping chains and orders events by timestamp.
-        """
-        if not correlated_pairs:
-            return []
+    def __init__(self):
+        # Defines what constitutes a strong signal for chain validation
+        self.strong_signal_keywords = {"hash", "domain", "email", "graph_overlap"}
 
-        # Using a Directed Graph to represent chronological chains
-        G = nx.DiGraph()
-
-        for e1, e2 in correlated_pairs:
-            # Ensure directed edge goes from older to newer event
-            if not hasattr(e1, "timestamp") or not hasattr(e2, "timestamp"):
+    def build_chains(self, correlated_links: List[Dict[str, Any]], events: List[Any]) -> List[Dict[str, Any]]:
+        """
+        Builds directed attack chains from a list of correlated event links.
+        Returns a structured list of valid attack chains.
+        """
+        # Map events for quick O(1) lookup
+        event_map = {getattr(e, "id"): e for e in events if hasattr(e, "id")}
+        
+        # adj: directed adjacency list for edges and their metadata
+        # undirected_adj: undirected connectivity mapping for component discovery
+        adj = defaultdict(dict)
+        undirected_adj = defaultdict(set)
+        
+        for link in correlated_links:
+            u = link.get("event1")
+            v = link.get("event2")
+            score = link.get("score", 0.0)
+            reasons = link.get("reasons", [])
+            
+            if not u or not v or u not in event_map or v not in event_map:
                 continue
                 
-            if e1.timestamp <= e2.timestamp:
-                G.add_edge(e1, e2)
+            e1 = event_map[u]
+            e2 = event_map[v]
+            
+            # Enforce directed chronological order
+            t1 = getattr(e1, "timestamp", None)
+            t2 = getattr(e2, "timestamp", None)
+            
+            if t1 and t2:
+                if t1 > t2:
+                    u, v = v, u
+                elif t1 == t2:
+                    # Break ties deterministically to avoid cycles
+                    if u > v:
+                        u, v = v, u
+            
+            # Support duplicate links by keeping the best score and merging reasons
+            if v in adj[u]:
+                adj[u][v]["score"] = max(score, adj[u][v]["score"])
+                adj[u][v]["reasons"] = list(set(adj[u][v]["reasons"]).union(set(reasons)))
             else:
-                G.add_edge(e2, e1)
-
+                adj[u][v] = {"score": score, "reasons": reasons}
+            
+            undirected_adj[u].add(v)
+            undirected_adj[v].add(u)
+            
+        # Discover connected components denoting potential chains
+        visited = set()
         chains = []
         
-        # Merge overlapping chains by finding weakly connected components
-        # (Components where events are linked regardless of edge direction)
-        for component_nodes in nx.weakly_connected_components(G):
-            if len(component_nodes) < 2:
-                continue
-
-            # Order events by timestamp to ensure chronological output
-            sorted_events = sorted(list(component_nodes), key=lambda x: x.timestamp)
-            event_ids = [getattr(e, "id", str(id(e))) for e in sorted_events]
-
-            # Detect sequences and build attack paths
-            attack_path = []
-            
-            # Check directed edges in chronological order to build the logical path
-            for i in range(len(sorted_events)):
-                for j in range(i + 1, len(sorted_events)):
-                    u = sorted_events[i]
-                    v = sorted_events[j]
+        for node in list(undirected_adj.keys()):
+            if node not in visited:
+                component = self._bfs_component(node, undirected_adj, visited)
+                if len(component) >= 2:
+                    chains.append(component)
                     
-                    if G.has_edge(u, v):
-                        u_type = getattr(u, "type", "unknown")
-                        v_type = getattr(v, "type", "unknown")
-                        path_str = f"{u_type}->{v_type}"
-                        attack_path.append(path_str)
+        # Extract and validate sequences from each component
+        results = []
+        for comp in chains:
+            chain_result = self._process_chain_component(comp, adj, event_map)
+            if chain_result:
+                results.append(chain_result)
+                
+        return results
 
-            # Remove duplicate transition strings if any, preserving discovery order
-            attack_path = list(dict.fromkeys(attack_path))
+    def _bfs_component(self, start_node: str, undirected_adj: Dict[str, Set[str]], visited: Set[str]) -> Set[str]:
+        """Runs standard BFS to extract a weakly connected component."""
+        component = set()
+        queue = deque([start_node])
+        visited.add(start_node)
+        
+        while queue:
+            curr = queue.popleft()
+            component.add(curr)
+            for neighbor in undirected_adj[curr]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        return component
 
-            # Calculate a heuristic confidence based on the presence of malicious sequences
-            confidence = 0.5  # Base confidence for any correlation
+    def _process_chain_component(self, component: Set[str], adj: Dict[str, Dict[str, Any]], event_map: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Processes, validates, and formats a single attack chain."""
+        edges = []
+        all_reasons = set()
+        total_score = 0.0
+        
+        # Reconstruct all localized edges
+        for u in component:
+            for v in adj[u]:
+                if v in component:
+                    edge_data = adj[u][v]
+                    edges.append((u, v, edge_data))
+                    all_reasons.update(edge_data["reasons"])
+                    total_score += edge_data["score"]
+                    
+        num_edges = len(edges)
+        if num_edges == 0:
+            return None
             
-            if "email->url" in attack_path:
-                confidence += 0.2
-            if "url->attachment" in attack_path:
-                confidence += 0.2
-            if len(event_ids) >= 3:
-                 confidence += 0.1
-                 
-            # Ensure confidence sits safely between 0.0 and 1.0
-            confidence = min(1.0, round(confidence, 2))
-
-            chains.append({
-                "chain_id": str(uuid.uuid4()),
-                "events": event_ids,
-                "attack_path": attack_path,
-                "confidence": float(confidence)
-            })
-
-        return chains
+        avg_score = total_score / num_edges
+        
+        # VALIDATION 1: Average edge score must be >= 0.5
+        if avg_score < 0.5:
+            return None
+            
+        # VALIDATION 2: Must contain at least one strong signal
+        has_strong_signal = any(
+            any(keyword in reason for keyword in self.strong_signal_keywords) 
+            for reason in all_reasons
+        )
+        if not has_strong_signal:
+            return None
+            
+        # Ensure chronological ordering of the events
+        sorted_nodes = sorted(list(component), key=lambda x: (getattr(event_map[x], "timestamp"), x))
+        
+        # Infer chronological attack path sequentially
+        attack_path = []
+        sorted_edges = sorted(edges, key=lambda e: getattr(event_map[e[0]], "timestamp"))
+        
+        for u, v, _ in sorted_edges:
+            t1 = getattr(event_map[u], "type", "unknown")
+            t2 = getattr(event_map[v], "type", "unknown")
+            
+            if t1 == "url" and t2 == "url":
+                path_step = "redirect"
+            else:
+                path_step = f"{t1}->{t2}"
+                
+            attack_path.append(path_step)
+                
+        # Deduplicate sequential/matching steps to clean up complex paths
+        clean_attack_path = list(dict.fromkeys(attack_path))
+        
+        # Compute dynamic confidence
+        confidence = avg_score
+        if len(component) >= 3:
+            confidence += 0.15 # Stronger confidence with extended multi-stage links
+            
+        if any(key in reason for reason in all_reasons for key in ("hash", "domain")):
+            confidence += 0.20 # Bonus for highly precise matches
+            
+        confidence = max(0.0, min(1.0, confidence))
+        
+        return {
+            "chain_id": str(uuid.uuid4()),
+            "events": sorted_nodes,
+            "attack_path": clean_attack_path,
+            "confidence": round(confidence, 3),
+            "meta": {
+                "event_count": len(component),
+                "avg_score": round(avg_score, 3)
+            }
+        }

@@ -1,17 +1,27 @@
-import magic
+import mimetypes
+from importlib import import_module
 from pathlib import Path
 from typing import Dict, Any
-from src.analyzers.base import BaseAnalyzer
+from analyzers.attachements.src.analyzers.base import BaseAnalyzer
+
+try:
+    magic = import_module("magic")
+except Exception:
+    magic = None
 
 class MagicAnalyzer(BaseAnalyzer):
     name = "python-magic"
 
     def analyze(self, file_path: Path) -> Dict[str, Any]:
         try:
-            # Get MIME type (e.g., 'application/pdf')
-            mime_type = magic.from_file(str(file_path), mime=True)
-            # Get human-readable description (e.g., 'PDF document, version 1.5')
-            description = magic.from_file(str(file_path))
+            if magic is not None:
+                # Get MIME type (e.g., 'application/pdf')
+                mime_type = magic.from_file(str(file_path), mime=True)
+                # Get human-readable description (e.g., 'PDF document, version 1.5')
+                description = magic.from_file(str(file_path))
+            else:
+                mime_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+                description = f"Unknown file type ({file_path.suffix or 'no extension'})"
 
             # Let's flag inherently risky file types (Executables, Scripts, Macros)
             # We will do deeper extension spoofing checks in the Risk Engine (Phase 4)

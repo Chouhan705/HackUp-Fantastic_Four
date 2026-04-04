@@ -1,13 +1,23 @@
+import importlib
 from pathlib import Path
 from typing import Dict, Any
-from oletools.olevba import VBA_Parser
-from src.analyzers.base import BaseAnalyzer
+from analyzers.attachements.src.analyzers.base import BaseAnalyzer
 
 class OfficeAnalyzer(BaseAnalyzer):
     name = "oletools"
 
     def analyze(self, file_path: Path) -> Dict[str, Any]:
         try:
+            # Import lazily to avoid static unresolved-import errors when oletools is optional.
+            try:
+                olevba = importlib.import_module("oletools.olevba")
+                VBA_Parser = getattr(olevba, "VBA_Parser")
+            except (ModuleNotFoundError, AttributeError):
+                return {
+                    "is_flagged": False,
+                    "raw_output": {"ignored": "oletools is not installed or VBA_Parser is unavailable."}
+                }
+
             # Initialize parser. It handles DOC, XLS, DOCX, XLSM, etc.
             vbaparser = VBA_Parser(str(file_path))
             
